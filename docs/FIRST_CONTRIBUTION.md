@@ -62,6 +62,7 @@ targets from tests. Then run:
 cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
+cargo test --locked --doc
 ```
 
 For a fast edit/test loop, run a relevant test by name, for example:

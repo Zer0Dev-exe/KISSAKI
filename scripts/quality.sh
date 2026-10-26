@@ -4,6 +4,8 @@ cd "$(dirname "$0")/.."
 mkdir -p target/quality
 cargo fmt --all --check
 cargo clippy --locked --all-targets --message-format=json -- -D warnings > target/quality/clippy.json
+cargo test --locked --doc
+RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --lib
 cargo llvm-cov --locked --all-targets \
   --ignore-filename-regex '/tests/' \
   --fail-under-lines 90 \

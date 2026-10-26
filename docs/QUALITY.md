@@ -10,6 +10,11 @@ can prove a program flawless. Passing Clippy does not mean SonarQube has run.
 - Clippy cognitive complexity is capped at 15; functions are capped at 80 code
   lines using Clippy's counting rules. These are not Sonar's complexity metrics.
 - All tests must pass; production line coverage must be at least 90%.
+- Library examples must pass `cargo test --locked --doc` separately from the
+  all-target suite. Runnable examples are network-free; `no_run` examples are
+  compiled only. Rustdoc must build with warnings denied. The library guide
+  in `docs/LIBRARY.md` is included directly in the crate's documentation.
+  CI checks these examples on Linux/macOS/Windows and on the Rust 1.88 MSRV.
 - Only test files are excluded from coverage. The CLI, network policy, transport,
   extraction, frontier, and orchestrator are included.
 - CI also builds releases on Linux/macOS/Windows, checks Rust 1.88, audits
