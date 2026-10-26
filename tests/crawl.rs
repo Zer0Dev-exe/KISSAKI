@@ -69,10 +69,12 @@ impl Server {
                         "/script" => ("200 OK", "", "<script src='/app.js'></script>".to_owned()),
                         "/app.js" => ("200 OK", "", "fetch('/api/data');".to_owned()),
                         "/post" => ("200 OK", "", "<form method='post' action='/endpoint'><input name='secret'></form>".to_owned()),
+                        "/scope-noise" => ("200 OK", "", "<a href='http://127.0.0.1:1/nope'>outside</a><a href='/blocked'>excluded</a><a href='/ignored'>not included</a><a href='/kept'>allowed</a>".to_owned()),
+                        "/scope-noise.js" => ("200 OK", "", "fetch('http://127.0.0.1:1/nope');fetch('/blocked');fetch('/ignored');fetch('/kept');".to_owned()),
                         _ => ("200 OK", "", "done".to_owned()),
                     };
                     let content_type = match path.as_str() {
-                        "/app.js" => "application/javascript",
+                        "/app.js" | "/scope-noise.js" => "application/javascript",
                         "/binary-error" => "application/octet-stream",
                         _ => "text/html",
                     };
@@ -106,6 +108,33 @@ fn config() -> Config {
         delay: Duration::ZERO,
         ..Config::default()
     }
+}
+
+#[tokio::test]
+async fn rejected_links_do_not_starve_in_scope_html_or_javascript_discovery() -> Result<()> {
+    let include = regex::Regex::new(r"/(scope-noise(?:\.js)?|blocked|kept)$")?;
+    let exclude = regex::Regex::new("/blocked")?;
+    for (path, javascript) in [("/scope-noise", false), ("/scope-noise.js", true)] {
+        let server = Server::start().await?;
+        let kept = server.url("/kept")?;
+        let report = crawl(
+            vec![server.url(path)?],
+            Config {
+                max_links_per_page: 1,
+                javascript,
+                include: Some(include.clone()),
+                exclude: Some(exclude.clone()),
+                ..config()
+            },
+        )
+        .await?;
+        assert_eq!(report.pages.len(), 2, "{path}");
+        assert_eq!(report.pages[0].links, std::slice::from_ref(&kept));
+        assert_eq!(report.pages[1].url, kept);
+        assert!(report.pages.iter().all(|page| page.error.is_none()));
+        assert_eq!(server.requests.lock().await.len(), 2);
+    }
+    Ok(())
 }
 
 #[tokio::test]

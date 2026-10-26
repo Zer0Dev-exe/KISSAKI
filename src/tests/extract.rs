@@ -104,3 +104,44 @@ fn invalid_document_base_falls_back_to_the_response_url() -> Result<()> {
     }
     Ok(())
 }
+
+#[test]
+fn rejected_html_does_not_exhaust_the_javascript_budget() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = "<a href='https://outside.invalid/nope'>outside</a><a href='/blocked'>filtered</a><script>fetch('/kept');fetch('/later');</script>";
+    let links = extract_links_where(&base, body, true, 1, |url| url.path() == "/kept");
+    assert_eq!(links, [base.join("/kept")?]);
+    Ok(())
+}
+
+#[test]
+fn an_external_base_does_not_hide_later_permitted_absolute_links() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = "<base href='https://outside.invalid/'><a href='relative'>outside</a><a href='https://example.com/kept'>allowed</a>";
+    let links = extract_links_where(&base, body, false, 1, |url| url.origin() == base.origin());
+    assert_eq!(links, [base.join("/kept")?]);
+    Ok(())
+}
+
+#[test]
+fn standalone_extraction_keeps_its_unscoped_public_contract() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = "<a href='https://outside.invalid/first'>external</a><a href='/second'>local</a>";
+    let links = extract_links(&base, body, true, 1);
+    assert_eq!(links, [Url::parse("https://outside.invalid/first")?]);
+    Ok(())
+}
+
+#[test]
+fn a_rejecting_predicate_does_not_retain_any_html_or_javascript_links() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = "<a href='/first'>html</a><script>fetch('/second');</script>";
+    assert!(extract_links_where(&base, body, true, 1, |_| false).is_empty());
+    assert!(
+        extract_links_where(&base, body, true, 0, |_| panic!(
+            "zero budget must skip extraction"
+        ))
+        .is_empty()
+    );
+    Ok(())
+}

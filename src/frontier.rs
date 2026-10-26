@@ -1,11 +1,15 @@
-use std::collections::{HashSet, VecDeque};
+use std::{
+    collections::{HashSet, VecDeque},
+    sync::Arc,
+};
 
 use anyhow::{Result, bail};
-use url::{Origin, Url};
+use url::Url;
 
 use crate::{
     Config, Page,
     policy::{normalize_url, validate_destination},
+    scope::Scope,
 };
 
 #[derive(Clone)]
@@ -17,7 +21,7 @@ pub(crate) struct Job {
 
 pub(crate) struct Frontier<'config> {
     config: &'config Config,
-    origins: HashSet<Origin>,
+    scope: Arc<Scope<'config>>,
     seen: HashSet<Url>,
     queue: VecDeque<Job>,
     pub page_limit_reached: bool,
@@ -38,7 +42,7 @@ impl<'config> Frontier<'config> {
             .collect::<Result<Vec<_>>>()?;
         let mut frontier = Self {
             config,
-            origins: seeds.iter().map(Url::origin).collect(),
+            scope: Arc::new(Scope::new(&seeds, config)),
             seen: HashSet::new(),
             queue: VecDeque::new(),
             page_limit_reached: false,
@@ -55,6 +59,10 @@ impl<'config> Frontier<'config> {
 
     pub fn next(&mut self) -> Option<Job> {
         self.queue.pop_front()
+    }
+
+    pub fn scope(&self) -> Arc<Scope<'config>> {
+        self.scope.clone()
     }
 
     pub fn complete(&mut self, job: &Job, page: &mut Page) {
@@ -75,18 +83,7 @@ impl<'config> Frontier<'config> {
     }
 
     fn allows(&self, url: &Url) -> bool {
-        self.origins.contains(&url.origin())
-            && validate_destination(url, self.config.allow_private).is_ok()
-            && self
-                .config
-                .include
-                .as_ref()
-                .is_none_or(|pattern| pattern.is_match(url.as_str()))
-            && self
-                .config
-                .exclude
-                .as_ref()
-                .is_none_or(|pattern| !pattern.is_match(url.as_str()))
+        self.scope.allows(url)
     }
 
     fn redirect(&self, job: &Job, target: &Url) -> Result<Job> {

@@ -61,6 +61,9 @@ No need to pretend you already know the codebase.
 - Strict same-origin scope (scheme, host, and effective port) for every seed.
   Redirects are checked manually before the next request; an HTTP-to-HTTPS
   upgrade requires both origins to be explicitly seeded.
+- Discovery applies origin, network, and regex admission rules **before** counting
+  links toward the per-page budget. Rejected candidates cannot crowd out later
+  permitted URLs, including URLs found in optional JavaScript extraction.
 - Non-public IPs blocked by default, including loopback, link-local, cloud
   metadata, IPv4-mapped IPv6, and conservative special-use ranges. DNS answers
   are checked by the resolver that supplies the actual connection addresses.

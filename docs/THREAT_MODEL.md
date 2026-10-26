@@ -13,6 +13,9 @@ The operator and their CLI configuration are trusted; remote content is not.
   enforce seed counts while reading. Reject invalid seed input before output
   creation. This does not bound argv allocation already performed by the OS/CLI.
 - Compare complete origins rather than substring or suffix matches.
+- Share one immutable admission policy between extraction and scheduling.
+  Out-of-scope or regex-rejected candidates cannot exhaust the accepted-link
+  budget before a later permitted link is considered. Recheck before scheduling.
 - Disable automatic redirects and proxies. Check each redirect before scheduling.
 - Use a custom connection resolver to reject non-public and mixed DNS answers;
   connect to the addresses from that checked result, not a second resolution.
@@ -44,6 +47,10 @@ use substantial memory. Runtime deadlines do not preempt synchronous parsing or
 all OS resolver work. Process-level CPU, memory, and egress isolation is required
 for hostile multi-tenant use. No such service is shipped by this repository.
 
+Rejected link candidates still consume parsing and policy-checking CPU within
+the response byte limit. The per-page link budget bounds retained accepted URLs,
+not the number of inspected attributes or a hard CPU allowance.
+
 Transitive unsafe code, malicious dependency updates, compiler/runtime defects,
 and TLS/OS vulnerabilities are outside first-party memory-safety enforcement.
 The SBOM does not cover system libraries, the toolchain, or a complete container
@@ -54,6 +61,8 @@ image. This project has not received an independent security audit.
 Unit tests cover special addresses, mapped IPv6, canonicalization, credential
 rejection, shared input budgets, HTML entities/base URLs, discovery caps, and
 optional JS extraction.
+Regressions also cover rejected-link budget starvation in HTML and JavaScript,
+external base URLs, and the standalone extractor's intentionally unscoped API.
 Local HTTP tests cover scope, duplicate/cyclic URLs, depth/page/query limits,
 redirect limits, chunked/declared oversized bodies, timeouts, headers, request
 spacing, HTTP error/redirect semantics, CLI exit status, exclusive output creation,
