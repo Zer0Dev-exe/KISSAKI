@@ -169,9 +169,12 @@ bytes. Only HTML and
 opt-in JavaScript MIME types are read for extraction. Automatic content
 decompression is explicitly disabled, including when a library consumer enables
 reqwest compression features. Requests prefer `Accept-Encoding: identity` unless
-you supply that header. Non-identity `Content-Encoding` on extractable responses
-produces a page error before body parsing; compressed content is not silently
-treated as an empty discovery result. Binary bodies are not parsed. Input, parsed DOMs,
+you supply that header. For extractable responses that can contain a body,
+non-identity `Content-Encoding` produces a page error before body parsing;
+compressed content is not silently
+treated as an empty discovery result. Responses with status 204, 205, or 304
+retain their metadata but never have their bodies decoded or parsed. Binary
+bodies are not parsed. Input, parsed DOMs,
 concurrent bodies, discovered links, and the final report all consume memory;
 use an OS/container memory limit when handling hostile targets. Some synchronous
 DNS/parser work is not preemptible by the async crawl deadline.

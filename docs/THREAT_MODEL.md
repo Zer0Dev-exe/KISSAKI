@@ -30,6 +30,9 @@ The operator and their CLI configuration are trusted; remote content is not.
 - Do not execute discovered code or submit forms/credentials automatically.
 - Do not extract links from HTTP 4xx/5xx bodies. Strict HTTP mode also marks these
   observations as page errors; redirects missing Location always report errors.
+- Skip response bodies for 204/205/304 before validating content encodings. Keep
+  metadata without treating it as encoded content or discovering links in a
+  malformed response that supplies an unwanted body.
 - Forbid unsafe code in first-party crates; lock dependencies, audit advisories,
   and generate a CycloneDX dependency inventory.
 
@@ -68,6 +71,7 @@ Regressions also cover rejected-link budget starvation in HTML and JavaScript,
 external base URLs, and the standalone extractor's intentionally unscoped API.
 Encoding regressions cover genuine gzip and mislabeled HTML, repeated encoding
 headers, invalid bytes, identity negotiation, and compressed binary skipping.
+They also cover no-content status metadata and an illegal HTML body on 205.
 Local HTTP tests cover scope, duplicate/cyclic URLs, depth/page/query limits,
 redirect limits, chunked/declared oversized bodies, timeouts, headers, request
 spacing, HTTP error/redirect semantics, CLI exit status, exclusive output creation,

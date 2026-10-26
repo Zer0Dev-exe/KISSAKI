@@ -26,7 +26,9 @@ Internal modules are concrete types, not a framework of traits and factories.
    public/private answers unless private access was explicitly enabled.
 5. Preserve HTTP error status without parsing error bodies. Optional strict HTTP
    mode records these as page errors. Read only supported successful content
-   types within the response byte limit; reject non-identity content encodings
+   types within the response byte limit. Skip bodies for 204/205/304 while
+   retaining status/content type; representation metadata is not a body to decode.
+   Reject non-identity content encodings
    before reading extractable bodies. Never execute discovered content.
 6. Filter extracted candidates through the shared scope before counting unique
    links toward the per-page budget. The frontier rechecks admission before

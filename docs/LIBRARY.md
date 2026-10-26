@@ -90,8 +90,10 @@ equals the configured limit. Pages are in completion order, not seed order.
 
 HTTP 4xx/5xx statuses are observations by default and their bodies are never
 parsed. Set `fail_on_http_error` to also record them as page errors. Unsupported
-content encodings on extractable responses are page errors. Missing status
-indicates no response status was obtained; zero bytes can also mean a skipped
+content encodings on extractable responses that can carry a body are page errors.
+Responses with status 204, 205, or 304 retain their metadata but skip body reading,
+decoding checks, and extraction, even if an invalid server sends content. Missing
+status indicates no response status was obtained; zero bytes can also mean a skipped
 body, not necessarily a zero-length server response. `Page.bytes` counts body
 bytes retained for parsing, not headers or total network traffic.
 

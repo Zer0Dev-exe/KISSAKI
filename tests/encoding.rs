@@ -31,6 +31,15 @@ impl Drop for Server {
 
 impl Server {
     async fn start(mime: &str, encoding: Option<&str>, body: &[u8]) -> Result<Self> {
+        Self::start_with_status("200 OK", mime, encoding, body).await
+    }
+
+    async fn start_with_status(
+        status: &str,
+        mime: &str,
+        encoding: Option<&str>,
+        body: &[u8],
+    ) -> Result<Self> {
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         let base = Url::parse(&format!("http://{}/", listener.local_addr()?))?;
         let request = Arc::new(Mutex::new(Vec::new()));
@@ -38,9 +47,13 @@ impl Server {
         let encoding = encoding
             .map(|value| format!("Content-Encoding: {value}\r\n"))
             .unwrap_or_default();
+        let length = if matches!(status, "204 No Content" | "304 Not Modified") {
+            String::new()
+        } else {
+            format!("Content-Length: {}\r\n", body.len())
+        };
         let mut response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\n{encoding}Content-Length: {}\r\nConnection: close\r\n\r\n",
-            body.len()
+            "HTTP/1.1 {status}\r\nContent-Type: {mime}\r\n{encoding}{length}Connection: close\r\n\r\n",
         ).into_bytes();
         response.extend_from_slice(body);
         let task = tokio::spawn(async move {
@@ -84,6 +97,46 @@ impl Server {
         }
         crawl(vec![self.base.clone()], config).await
     }
+}
+
+#[tokio::test]
+async fn no_content_statuses_keep_metadata_without_decoding_a_body() -> Result<()> {
+    for (status, code) in [
+        ("204 No Content", 204),
+        ("205 Reset Content", 205),
+        ("304 Not Modified", 304),
+    ] {
+        let server = Server::start_with_status(status, "text/html", Some("gzip"), b"").await?;
+        let report = server.crawl(None).await?;
+        let page = &report.pages[0];
+        assert_eq!(page.status, Some(code));
+        assert_eq!(page.content_type.as_deref(), Some("text/html"));
+        assert!(page.error.is_none(), "{status}: {:?}", page.error);
+        assert_eq!(page.bytes, 0);
+        assert!(page.links.is_empty());
+        assert!(page.redirect.is_none());
+        assert_eq!(report.pages.len(), 1);
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn reset_content_never_extracts_an_illegal_body() -> Result<()> {
+    let server = Server::start_with_status(
+        "205 Reset Content",
+        "text/html",
+        Some("identity"),
+        b"<a href='/leak'>must not be discovered</a>",
+    )
+    .await?;
+    let report = server.crawl(None).await?;
+    let page = &report.pages[0];
+    assert_eq!(page.status, Some(205));
+    assert!(page.error.is_none());
+    assert_eq!(page.bytes, 0);
+    assert!(page.links.is_empty());
+    assert_eq!(report.pages.len(), 1);
+    Ok(())
 }
 
 #[tokio::test]
