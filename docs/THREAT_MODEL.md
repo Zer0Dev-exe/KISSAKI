@@ -24,6 +24,9 @@ The operator and their CLI configuration are trusted; remote content is not.
 - Keep TLS verification enabled. Never allow custom Host/proxy/framing headers.
 - Cap active work, discovered/scheduled URLs, response bytes, links per response,
   redirect chains, depth, and deadlines. Do not decompress remote content.
+- Explicitly disable all HTTP content decoders even if downstream dependencies
+  enable them. Prefer identity encoding and reject non-identity encodings before
+  reading extractable bodies. Skip non-extractable binary bodies unchanged.
 - Do not execute discovered code or submit forms/credentials automatically.
 - Do not extract links from HTTP 4xx/5xx bodies. Strict HTTP mode also marks these
   observations as page errors; redirects missing Location always report errors.
@@ -63,6 +66,8 @@ rejection, shared input budgets, HTML entities/base URLs, discovery caps, and
 optional JS extraction.
 Regressions also cover rejected-link budget starvation in HTML and JavaScript,
 external base URLs, and the standalone extractor's intentionally unscoped API.
+Encoding regressions cover genuine gzip and mislabeled HTML, repeated encoding
+headers, invalid bytes, identity negotiation, and compressed binary skipping.
 Local HTTP tests cover scope, duplicate/cyclic URLs, depth/page/query limits,
 redirect limits, chunked/declared oversized bodies, timeouts, headers, request
 spacing, HTTP error/redirect semantics, CLI exit status, exclusive output creation,

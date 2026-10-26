@@ -4,7 +4,7 @@ use anyhow::{Context, Result, bail};
 use futures_util::StreamExt;
 use reqwest::{
     Client, Response,
-    header::{CONTENT_TYPE, LOCATION},
+    header::{ACCEPT_ENCODING, CONTENT_ENCODING, CONTENT_TYPE, HeaderMap, HeaderValue, LOCATION},
     redirect::Policy,
 };
 use tokio::{
@@ -41,15 +41,23 @@ impl RequestPacer {
 }
 
 pub(crate) fn build_client(config: &Config) -> Result<Client> {
+    let mut headers = config.headers.clone();
+    headers
+        .entry(ACCEPT_ENCODING)
+        .or_insert(HeaderValue::from_static("identity"));
     Client::builder()
         .redirect(Policy::none())
         .no_proxy()
+        .no_gzip()
+        .no_brotli()
+        .no_zstd()
+        .no_deflate()
         .dns_resolver(resolver(config.allow_private))
         .timeout(config.request_timeout)
         .connect_timeout(config.request_timeout)
         .pool_max_idle_per_host(config.concurrency)
         .user_agent(concat!("kissaki/", env!("CARGO_PKG_VERSION")))
-        .default_headers(config.headers.clone())
+        .default_headers(headers)
         .build()
         .context("building HTTP client")
 }
@@ -94,6 +102,7 @@ async fn read_page(
     if !is_extractable(page.content_type.as_deref(), config.javascript) {
         return Ok(());
     }
+    validate_content_encoding(response.headers())?;
     let body = read_body(response, config.max_response_bytes, &mut page.bytes).await?;
     if job.depth < config.depth {
         page.links = extract_links_where(
@@ -103,6 +112,18 @@ async fn read_page(
             config.max_links_per_page,
             |url| scope.allows(url),
         );
+    }
+    Ok(())
+}
+
+fn validate_content_encoding(headers: &HeaderMap) -> Result<()> {
+    for value in headers.get_all(CONTENT_ENCODING) {
+        let value = value.to_str().context("invalid Content-Encoding header")?;
+        for coding in value.split(',').map(str::trim) {
+            if !coding.is_empty() && !coding.eq_ignore_ascii_case("identity") {
+                bail!("unsupported Content-Encoding; encoded response bodies are not decoded");
+            }
+        }
     }
     Ok(())
 }

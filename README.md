@@ -166,7 +166,11 @@ including comments and whitespace in files/stdin. Seeds are counted while readin
 and cannot exceed `--max-pages`, including duplicates. URLs are limited to 4,096
 bytes. Only HTML and
 opt-in JavaScript MIME types are read for extraction. Automatic content
-decompression is disabled. Binary bodies are not parsed. Input, parsed DOMs,
+decompression is explicitly disabled, including when a library consumer enables
+reqwest compression features. Requests prefer `Accept-Encoding: identity` unless
+you supply that header. Non-identity `Content-Encoding` on extractable responses
+produces a page error before body parsing; compressed content is not silently
+treated as an empty discovery result. Binary bodies are not parsed. Input, parsed DOMs,
 concurrent bodies, discovered links, and the final report all consume memory;
 use an OS/container memory limit when handling hostile targets. Some synchronous
 DNS/parser work is not preemptible by the async crawl deadline.
