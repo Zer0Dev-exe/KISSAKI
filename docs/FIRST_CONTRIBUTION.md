@@ -45,7 +45,7 @@ See the [local demo](../README.md#try-it-locally) if you want to try the CLI.
 | CLI input, errors, exit codes | `src/main.rs`, `src/targets.rs`, `tests/cli.rs` |
 | HTTP behavior and local fixtures | `src/transport.rs`, `tests/crawl.rs` |
 | Link discovery | `src/extract.rs`, `src/tests/extract.rs` |
-| Scope, redirects, deduplication | `src/frontier.rs`, `src/tests/frontier.rs` |
+| Scope, redirects, deduplication | `src/scope.rs`, `src/frontier.rs`, `src/tests/frontier.rs` |
 | URL and IP safety | `src/policy.rs`, `src/tests/policy.rs` |
 | Limits and defaults | `src/config.rs`, `src/tests/config.rs` |
 

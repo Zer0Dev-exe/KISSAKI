@@ -14,9 +14,10 @@ use tokio::{
 
 use crate::{
     Config, Page,
-    extract::extract_links,
+    extract::extract_links_where,
     frontier::Job,
     policy::{normalize_url, resolver},
+    scope::Scope,
 };
 
 pub(crate) struct RequestPacer {
@@ -53,15 +54,21 @@ pub(crate) fn build_client(config: &Config) -> Result<Client> {
         .context("building HTTP client")
 }
 
-pub(crate) async fn fetch(client: &Client, job: &Job, config: &Config) -> Page {
+pub(crate) async fn fetch(client: &Client, job: &Job, config: &Config, scope: &Scope<'_>) -> Page {
     let mut page = Page::new(job.url.clone(), job.depth);
-    if let Err(error) = read_page(client, job, config, &mut page).await {
+    if let Err(error) = read_page(client, job, config, &mut page, scope).await {
         page.error = Some(format!("{error:#}"));
     }
     page
 }
 
-async fn read_page(client: &Client, job: &Job, config: &Config, page: &mut Page) -> Result<()> {
+async fn read_page(
+    client: &Client,
+    job: &Job,
+    config: &Config,
+    page: &mut Page,
+    scope: &Scope<'_>,
+) -> Result<()> {
     let response = client.get(job.url.clone()).send().await?;
     page.status = Some(response.status().as_u16());
     page.content_type = response
@@ -89,11 +96,12 @@ async fn read_page(client: &Client, job: &Job, config: &Config, page: &mut Page)
     }
     let body = read_body(response, config.max_response_bytes, &mut page.bytes).await?;
     if job.depth < config.depth {
-        page.links = extract_links(
+        page.links = extract_links_where(
             &job.url,
             &String::from_utf8_lossy(&body),
             config.javascript,
             config.max_links_per_page,
+            |url| scope.allows(url),
         );
     }
     Ok(())

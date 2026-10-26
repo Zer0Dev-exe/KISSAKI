@@ -10,6 +10,7 @@ use url::Url;
 pub use crate::config::Config;
 use crate::{
     frontier::{Frontier, Job},
+    scope::Scope,
     transport::{RequestPacer, build_client, fetch},
 };
 
@@ -52,15 +53,17 @@ async fn dispatch(
     job: Job,
     config: &Config,
     pacer: Arc<RequestPacer>,
+    scope: &Scope<'_>,
 ) -> (Job, Page) {
     pacer.wait().await;
-    let page = fetch(&client, &job, config).await;
+    let page = fetch(&client, &job, config, scope).await;
     (job, page)
 }
 
 pub async fn crawl(seeds: Vec<Url>, config: Config) -> Result<CrawlReport> {
     config.validate()?;
     let mut frontier = Frontier::new(seeds, &config)?;
+    let scope = frontier.scope();
     let client = build_client(&config)?;
     let pacer = Arc::new(RequestPacer::new(config.delay));
     let deadline = Instant::now() + config.crawl_timeout;
@@ -69,7 +72,13 @@ pub async fn crawl(seeds: Vec<Url>, config: Config) -> Result<CrawlReport> {
     loop {
         while pending.len() < config.concurrency {
             let Some(job) = frontier.next() else { break };
-            pending.push(dispatch(client.clone(), job, &config, pacer.clone()));
+            pending.push(dispatch(
+                client.clone(),
+                job,
+                &config,
+                pacer.clone(),
+                &scope,
+            ));
         }
         if pending.is_empty() {
             break;

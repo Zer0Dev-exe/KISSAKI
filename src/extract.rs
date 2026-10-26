@@ -19,13 +19,14 @@ static JAVASCRIPT_URLS: LazyLock<Regex> = LazyLock::new(|| {
         .expect("valid built-in JavaScript URL pattern")
 });
 
-struct Links {
+struct Links<'filter> {
     urls: Vec<Url>,
     seen: HashSet<Url>,
     limit: usize,
+    accept: &'filter dyn Fn(&Url) -> bool,
 }
 
-impl Links {
+impl Links<'_> {
     fn is_full(&self) -> bool {
         self.urls.len() >= self.limit
     }
@@ -37,6 +38,7 @@ impl Links {
         }
         if let Ok(joined) = base.join(value)
             && let Ok(url) = normalize_url(joined.as_str())
+            && (self.accept)(&url)
             && self.seen.insert(url.clone())
         {
             self.urls.push(url);
@@ -45,6 +47,16 @@ impl Links {
 }
 
 pub fn extract_links(base: &Url, body: &str, javascript: bool, limit: usize) -> Vec<Url> {
+    extract_links_where(base, body, javascript, limit, |_| true)
+}
+
+pub(crate) fn extract_links_where(
+    base: &Url,
+    body: &str,
+    javascript: bool,
+    limit: usize,
+    accept: impl Fn(&Url) -> bool,
+) -> Vec<Url> {
     if limit == 0 {
         return Vec::new();
     }
@@ -52,6 +64,7 @@ pub fn extract_links(base: &Url, body: &str, javascript: bool, limit: usize) -> 
         urls: Vec::new(),
         seen: HashSet::new(),
         limit,
+        accept: &accept,
     };
     extract_html(base, body, &mut links);
     if javascript && !links.is_full() {
@@ -67,7 +80,7 @@ pub fn extract_links(base: &Url, body: &str, javascript: bool, limit: usize) -> 
     links.urls
 }
 
-fn extract_html(base: &Url, body: &str, links: &mut Links) {
+fn extract_html(base: &Url, body: &str, links: &mut Links<'_>) {
     let html = Html::parse_document(body);
     let document_base = html
         .select(&BASE_SELECTOR)

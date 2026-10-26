@@ -10,7 +10,8 @@ Internal modules are concrete types, not a framework of traits and factories.
 | `targets` | Shared CLI input byte/seed budgets and early seed validation |
 | `config` | Defaults and named validation of resource limits and headers |
 | `policy` | URL normalization, destination checks, validated DNS resolution |
-| `frontier` | Seed origins, filters, deduplication, queue, redirect admission |
+| `scope` | Shared immutable seed-origin, destination, and regex admission rules |
+| `frontier` | Deduplication, queue, page budget, redirect admission |
 | `transport` | Verified HTTP client, pacing, capped response streaming |
 | `extract` | Bounded HTML and optional JavaScript-string URL discovery |
 | `crawler` | Concurrent dispatch, completion, and global deadline |
@@ -26,13 +27,18 @@ Internal modules are concrete types, not a framework of traits and factories.
 5. Preserve HTTP error status without parsing error bodies. Optional strict HTTP
    mode records these as page errors. Read only supported successful content
    types within the response byte limit; never execute discovered content.
-6. Treat redirects as new admission decisions, retaining depth and enforcing
-   the redirect budget. Admit extracted links through the same frontier.
+6. Filter extracted candidates through the shared scope before counting unique
+   links toward the per-page budget. The frontier rechecks admission before
+   scheduling. Treat redirects as new admission decisions, retaining depth and
+   enforcing the redirect budget.
 7. Return structured pages, per-page errors, and budget/deadline indicators.
 
 ## Invariants to preserve
 
 - Scope uses scheme, host, and effective port, not suffix or substring matching.
+- Extraction and scheduling share the same immutable scope. Rejected candidates
+  do not consume the accepted-link budget. The public standalone `extract_links`
+  helper remains unscoped; callers outside the crawler must apply their own policy.
 - Authentication headers never justify broadening seed origins.
 - URL byte limits apply both before and after URL normalization/encoding.
 - The extractor caches built-in selectors/patterns, stops collecting after its
