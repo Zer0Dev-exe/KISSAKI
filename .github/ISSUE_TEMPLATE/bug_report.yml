@@ -1,0 +1,20 @@
+name: Bug report
+description: Report a reproducible bug using a local fixture, without secrets.
+body:
+  - type: markdown
+    attributes:
+      value: For vulnerabilities, use Security → Report a vulnerability, not this form.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Kissaki revision, Rust version, and OS.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Local reproduction and expected/actual behavior
+      description: Include sanitized options and a minimal local fixture. Never include credentials.
+    validations:
+      required: true

@@ -1,0 +1,10 @@
+/target/
+/dist/
+/.aws/
+/.codex/
+/.agents/
+.env
+.env.*
+*.jsonl
+*.cdx.json
+!sbom/*.cdx.json
