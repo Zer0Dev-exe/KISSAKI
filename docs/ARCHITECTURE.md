@@ -51,6 +51,9 @@ Internal modules are concrete types, not a framework of traits and factories.
   Accept-Encoding header. Validate every Content-Encoding header/list entry;
   unsupported encodings are errors, not successful empty discovery results.
 - TLS verification and the actual-connection DNS validator remain enabled.
+- IP policy uses compile-time typed networks rather than reparsing CIDR strings
+  for each candidate or DNS answer. Boundary tests compare the policy against
+  its textual reference ranges, including IPv4-mapped IPv6 addresses.
 - First-party code forbids `unsafe`; dependency code is outside that guarantee.
 - Limits bound work, not total process memory. OS/container limits are still
   needed for hostile workloads; the async deadline is not process preemption.

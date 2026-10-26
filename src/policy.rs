@@ -1,15 +1,40 @@
 use std::{
     io,
-    net::{IpAddr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     sync::Arc,
 };
 
 use anyhow::{Result, bail};
-use ipnet::IpNet;
+use ipnet::{Ipv4Net, Ipv6Net};
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use url::{Host, Url};
 
 pub const MAX_URL_LENGTH: usize = 4096;
+
+const DENIED_IPV4: &[Ipv4Net] = &[
+    Ipv4Net::new_assert(Ipv4Addr::new(0, 0, 0, 0), 8),
+    Ipv4Net::new_assert(Ipv4Addr::new(10, 0, 0, 0), 8),
+    Ipv4Net::new_assert(Ipv4Addr::new(100, 64, 0, 0), 10),
+    Ipv4Net::new_assert(Ipv4Addr::new(127, 0, 0, 0), 8),
+    Ipv4Net::new_assert(Ipv4Addr::new(169, 254, 0, 0), 16),
+    Ipv4Net::new_assert(Ipv4Addr::new(172, 16, 0, 0), 12),
+    Ipv4Net::new_assert(Ipv4Addr::new(192, 0, 0, 0), 24),
+    Ipv4Net::new_assert(Ipv4Addr::new(192, 0, 2, 0), 24),
+    Ipv4Net::new_assert(Ipv4Addr::new(192, 88, 99, 0), 24),
+    Ipv4Net::new_assert(Ipv4Addr::new(192, 168, 0, 0), 16),
+    Ipv4Net::new_assert(Ipv4Addr::new(198, 18, 0, 0), 15),
+    Ipv4Net::new_assert(Ipv4Addr::new(198, 51, 100, 0), 24),
+    Ipv4Net::new_assert(Ipv4Addr::new(203, 0, 113, 0), 24),
+    Ipv4Net::new_assert(Ipv4Addr::new(224, 0, 0, 0), 4),
+    Ipv4Net::new_assert(Ipv4Addr::new(240, 0, 0, 0), 4),
+];
+
+const DENIED_IPV6: &[Ipv6Net] = &[
+    Ipv6Net::new_assert(Ipv6Addr::new(0x2001, 0, 0, 0, 0, 0, 0, 0), 23),
+    Ipv6Net::new_assert(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0), 32),
+    Ipv6Net::new_assert(Ipv6Addr::new(0x2002, 0, 0, 0, 0, 0, 0, 0), 16),
+    Ipv6Net::new_assert(Ipv6Addr::new(0x3fff, 0, 0, 0, 0, 0, 0, 0), 20),
+];
 
 pub fn normalize_url(value: &str) -> Result<Url> {
     if value.len() > MAX_URL_LENGTH {
@@ -37,35 +62,15 @@ pub fn is_public_ip(address: IpAddr) -> bool {
         },
         address => address,
     };
-    let denied = match address {
-        IpAddr::V4(_) => &[
-            "0.0.0.0/8",
-            "10.0.0.0/8",
-            "100.64.0.0/10",
-            "127.0.0.0/8",
-            "169.254.0.0/16",
-            "172.16.0.0/12",
-            "192.0.0.0/24",
-            "192.0.2.0/24",
-            "192.88.99.0/24",
-            "192.168.0.0/16",
-            "198.18.0.0/15",
-            "198.51.100.0/24",
-            "203.0.113.0/24",
-            "224.0.0.0/4",
-            "240.0.0.0/4",
-        ][..],
+    match address {
+        IpAddr::V4(address) => !DENIED_IPV4.iter().any(|network| network.contains(&address)),
         IpAddr::V6(address) => {
             if address.segments()[0] & 0xe000 != 0x2000 {
                 return false;
             }
-            &["2001::/23", "2001:db8::/32", "2002::/16", "3fff::/20"][..]
+            !DENIED_IPV6.iter().any(|network| network.contains(&address))
         }
-    };
-    !denied
-        .iter()
-        .filter_map(|network| network.parse::<IpNet>().ok())
-        .any(|network| network.contains(&address))
+    }
 }
 
 pub fn validate_destination(url: &Url, allow_private: bool) -> Result<()> {

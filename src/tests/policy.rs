@@ -1,6 +1,76 @@
 use super::*;
 
 #[test]
+fn ipv4_policy_preserves_every_network_boundary_and_mapped_equivalent() -> Result<()> {
+    let reference = [
+        "0.0.0.0/8",
+        "10.0.0.0/8",
+        "100.64.0.0/10",
+        "127.0.0.0/8",
+        "169.254.0.0/16",
+        "172.16.0.0/12",
+        "192.0.0.0/24",
+        "192.0.2.0/24",
+        "192.88.99.0/24",
+        "192.168.0.0/16",
+        "198.18.0.0/15",
+        "198.51.100.0/24",
+        "203.0.113.0/24",
+        "224.0.0.0/4",
+        "240.0.0.0/4",
+    ]
+    .into_iter()
+    .map(str::parse::<Ipv4Net>)
+    .collect::<std::result::Result<Vec<_>, _>>()?;
+    for network in &reference {
+        for boundary in [u32::from(network.network()), u32::from(network.broadcast())] {
+            for bits in [
+                boundary.saturating_sub(1),
+                boundary,
+                boundary.saturating_add(1),
+            ] {
+                let address = Ipv4Addr::from(bits);
+                let expected = !reference.iter().any(|network| network.contains(&address));
+                assert_eq!(is_public_ip(IpAddr::V4(address)), expected, "{address}");
+                assert_eq!(
+                    is_public_ip(IpAddr::V6(address.to_ipv6_mapped())),
+                    expected,
+                    "mapped {address}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn ipv6_policy_preserves_denied_and_public_envelope_boundaries() -> Result<()> {
+    let reference = ["2001::/23", "2001:db8::/32", "2002::/16", "3fff::/20"]
+        .into_iter()
+        .map(str::parse::<Ipv6Net>)
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let public_envelope: Ipv6Net = "2000::/3".parse()?;
+    for network in reference.iter().chain(std::iter::once(&public_envelope)) {
+        for boundary in [
+            u128::from(network.network()),
+            u128::from(network.broadcast()),
+        ] {
+            for bits in [
+                boundary.saturating_sub(1),
+                boundary,
+                boundary.saturating_add(1),
+            ] {
+                let address = Ipv6Addr::from(bits);
+                let expected = public_envelope.contains(&address)
+                    && !reference.iter().any(|network| network.contains(&address));
+                assert_eq!(is_public_ip(IpAddr::V6(address)), expected, "{address}");
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn rejects_urls_that_expand_beyond_the_limit_during_encoding() {
     let value = format!("https://example.com/{}", "é".repeat(1000));
     assert!(value.len() < MAX_URL_LENGTH);
