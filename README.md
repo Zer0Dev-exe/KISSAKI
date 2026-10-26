@@ -146,7 +146,10 @@ Custom `-H 'Name: value'` headers are sent to **all explicitly seeded origins**,
 not to out-of-scope destinations. Never put secret headers in public logs, shell
 history, or issue reports. Query strings and discovered URLs may contain secrets;
 treat output files accordingly. `--ignore-query-params` changes deduplication,
-not the outgoing URL.
+not the outgoing URL. Extraction and scheduling use the same query-insensitive
+key: equivalent variants count once toward the per-page link budget, retaining
+the first accepted URL with its original query. Include/exclude filters still
+inspect the full URL before deduplication.
 
 ### Resource limits
 

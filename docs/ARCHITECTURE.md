@@ -43,6 +43,10 @@ Internal modules are concrete types, not a framework of traits and factories.
   do not consume the accepted-link budget. The public standalone `extract_links`
   helper remains unscoped; callers outside the crawler must apply their own policy.
 - Authentication headers never justify broadening seed origins.
+- Extraction and scheduling share a deduplication-key helper. When queries are
+  ignored, equivalent variants consume one per-page link slot. Keep the first
+  accepted URL unchanged; evaluate scope and regex filters on the original URL
+  before computing its key. The standalone extractor still distinguishes queries.
 - URL byte limits apply both before and after URL normalization/encoding.
 - The extractor caches built-in selectors/patterns, stops collecting after its
   unique-link budget is full, and skips JavaScript scanning when HTML fills it.

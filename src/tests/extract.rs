@@ -109,7 +109,7 @@ fn invalid_document_base_falls_back_to_the_response_url() -> Result<()> {
 fn rejected_html_does_not_exhaust_the_javascript_budget() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body = "<a href='https://outside.invalid/nope'>outside</a><a href='/blocked'>filtered</a><script>fetch('/kept');fetch('/later');</script>";
-    let links = extract_links_where(&base, body, true, 1, |url| url.path() == "/kept");
+    let links = extract_links_where(&base, body, true, 1, false, |url| url.path() == "/kept");
     assert_eq!(links, [base.join("/kept")?]);
     Ok(())
 }
@@ -118,7 +118,9 @@ fn rejected_html_does_not_exhaust_the_javascript_budget() -> Result<()> {
 fn an_external_base_does_not_hide_later_permitted_absolute_links() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body = "<base href='https://outside.invalid/'><a href='relative'>outside</a><a href='https://example.com/kept'>allowed</a>";
-    let links = extract_links_where(&base, body, false, 1, |url| url.origin() == base.origin());
+    let links = extract_links_where(&base, body, false, 1, false, |url| {
+        url.origin() == base.origin()
+    });
     assert_eq!(links, [base.join("/kept")?]);
     Ok(())
 }
@@ -133,12 +135,57 @@ fn standalone_extraction_keeps_its_unscoped_public_contract() -> Result<()> {
 }
 
 #[test]
+fn query_insensitive_discovery_counts_equivalent_links_once_and_keeps_first_url() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    for (body, javascript) in [
+        (
+            "<a href='/variant?first=1'></a><a href='/variant?second=2'></a><a href='/kept'></a>",
+            false,
+        ),
+        (
+            "fetch('/variant?first=1');fetch('/variant?second=2');fetch('/kept');",
+            true,
+        ),
+        (
+            "<a href='/variant?first=1'></a><script>fetch('/variant?second=2');fetch('/kept');</script>",
+            true,
+        ),
+    ] {
+        let first = base.join("/variant?first=1")?;
+        assert_eq!(
+            extract_links_where(&base, body, javascript, 2, true, |_| true),
+            [first.clone(), base.join("/kept")?]
+        );
+        assert_eq!(
+            extract_links(&base, body, javascript, 2),
+            [first, base.join("/variant?second=2")?]
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn filters_see_original_queries_before_deduplication() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body =
+        "<a href='/variant?blocked=1'></a><a href='/variant?allowed=2'></a><a href='/kept'></a>";
+    let links = extract_links_where(&base, body, false, 2, true, |url| {
+        url.query() != Some("blocked=1")
+    });
+    assert_eq!(
+        links,
+        [base.join("/variant?allowed=2")?, base.join("/kept")?]
+    );
+    Ok(())
+}
+
+#[test]
 fn a_rejecting_predicate_does_not_retain_any_html_or_javascript_links() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body = "<a href='/first'>html</a><script>fetch('/second');</script>";
-    assert!(extract_links_where(&base, body, true, 1, |_| false).is_empty());
+    assert!(extract_links_where(&base, body, true, 1, false, |_| false).is_empty());
     assert!(
-        extract_links_where(&base, body, true, 0, |_| panic!(
+        extract_links_where(&base, body, true, 0, false, |_| panic!(
             "zero budget must skip extraction"
         ))
         .is_empty()

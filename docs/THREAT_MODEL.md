@@ -16,6 +16,9 @@ The operator and their CLI configuration are trusted; remote content is not.
 - Share one immutable admission policy between extraction and scheduling.
   Out-of-scope or regex-rejected candidates cannot exhaust the accepted-link
   budget before a later permitted link is considered. Recheck before scheduling.
+- Share query-insensitive deduplication between extraction and scheduling when
+  explicitly enabled, preventing query variants from exhausting accepted-link
+  slots. Keep the first accepted URL unchanged and filter before deduplication.
 - Disable automatic redirects and proxies. Check each redirect before scheduling.
 - Use a custom connection resolver to reject non-public and mixed DNS answers;
   connect to the addresses from that checked result, not a second resolution.

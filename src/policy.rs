@@ -54,6 +54,14 @@ pub fn normalize_url(value: &str) -> Result<Url> {
     Ok(url)
 }
 
+pub(crate) fn deduplication_key(url: &Url, ignore_query: bool) -> Url {
+    let mut key = url.clone();
+    if ignore_query {
+        key.set_query(None);
+    }
+    key
+}
+
 pub fn is_public_ip(address: IpAddr) -> bool {
     let address = match address {
         IpAddr::V6(address) => match address.to_ipv4_mapped() {
