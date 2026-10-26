@@ -70,7 +70,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
       - run: cargo install cargo-llvm-cov --version 0.9.1 --locked
       - run: sh scripts/quality.sh
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: kissaki-quality
           path: target/quality/
@@ -100,7 +100,7 @@ jobs:
       - run: cargo audit --deny warnings
       - run: cargo install cargo-cyclonedx --version 0.5.9 --locked
       - run: sh scripts/sbom.sh
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: kissaki-sbom
           path: sbom/kissaki.cdx.json
