@@ -39,15 +39,23 @@ fn mime_policy_is_case_insensitive_and_never_sniffs_binary_bodies() {
         "TEXT/HTML; charset=utf-8",
         " application/xhtml+xml ",
     ] {
-        assert!(is_extractable(Some(mime), false));
+        for javascript in [false, true] {
+            assert_eq!(
+                extraction_mode(Some(mime), javascript),
+                Some(ExtractionMode::Html { javascript })
+            );
+        }
     }
     for mime in [
         "application/javascript",
         "text/javascript; charset=utf-8",
         "APPLICATION/X-JAVASCRIPT",
     ] {
-        assert!(is_extractable(Some(mime), true));
-        assert!(!is_extractable(Some(mime), false));
+        assert_eq!(
+            extraction_mode(Some(mime), true),
+            Some(ExtractionMode::JavaScript)
+        );
+        assert_eq!(extraction_mode(Some(mime), false), None);
     }
     for mime in [
         None,
@@ -56,6 +64,6 @@ fn mime_policy_is_case_insensitive_and_never_sniffs_binary_bodies() {
         Some("application/json"),
         Some("image/png"),
     ] {
-        assert!(!is_extractable(mime, true));
+        assert_eq!(extraction_mode(mime, true), None);
     }
 }

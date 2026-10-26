@@ -127,14 +127,17 @@ async fn main() -> Result<()> {
 that must not receive the same credentials. URL credentials, custom Host,
 framing, and proxy headers are rejected. Kissaki does not maintain a browser
 session or execute JavaScript; `javascript` only enables string-based endpoint
-discovery.
+discovery. For JavaScript MIME responses it never invokes the HTML parser;
+HTML responses can still combine HTML discovery with the optional string scan.
 Custom Accept-Encoding headers are preserved, but encoded bodies are not decoded.
 
 ## Extract links without making requests
 
 `extract::extract_links` normalizes, deduplicates, and limits discoveries, but
 it is intentionally **unscoped**, distinguishes query variants, and does not cap
-its caller-supplied body.
+its caller-supplied body. This helper treats input as HTML with optional
+JavaScript-string scanning; it has no response MIME information. The crawler
+selects the dedicated JavaScript-only mode for supported JavaScript MIME types.
 The body is parsed synchronously. This helper can return external or private
 destinations; do not schedule its output without a complete request policy.
 

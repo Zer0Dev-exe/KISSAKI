@@ -68,6 +68,7 @@ impl Server {
                         "/slow" => { tokio::time::sleep(Duration::from_millis(250)).await; ("200 OK", "", "slow".to_owned()) },
                         "/script" => ("200 OK", "", "<script src='/app.js'></script>".to_owned()),
                         "/app.js" => ("200 OK", "", "fetch('/api/data');".to_owned()),
+                        "/template.js" => ("200 OK", "", r#"const template = "<a href='phantom'>unused</a>"; fetch('/actual');"#.to_owned()),
                         "/post" => ("200 OK", "", "<form method='post' action='/endpoint'><input name='secret'></form>".to_owned()),
                         "/scope-noise" => ("200 OK", "", "<a href='http://127.0.0.1:1/nope'>outside</a><a href='/blocked'>excluded</a><a href='/ignored'>not included</a><a href='/kept'>allowed</a>".to_owned()),
                         "/scope-noise.js" => ("200 OK", "", "fetch('http://127.0.0.1:1/nope');fetch('/blocked');fetch('/ignored');fetch('/kept');".to_owned()),
@@ -76,7 +77,7 @@ impl Server {
                         _ => ("200 OK", "", "done".to_owned()),
                     };
                     let content_type = match path.as_str() {
-                        "/app.js" | "/scope-noise.js" | "/query-noise.js" => {
+                        "/app.js" | "/scope-noise.js" | "/query-noise.js" | "/template.js" => {
                             "application/javascript"
                         }
                         "/binary-error" => "application/octet-stream",
@@ -112,6 +113,36 @@ fn config() -> Config {
         delay: Duration::ZERO,
         ..Config::default()
     }
+}
+
+#[tokio::test]
+async fn javascript_mime_never_parses_template_strings_as_html() -> Result<()> {
+    for javascript in [false, true] {
+        let server = Server::start().await?;
+        let actual = server.url("/actual")?;
+        let report = crawl(
+            vec![server.url("/template.js")?],
+            Config {
+                javascript,
+                max_links_per_page: 1,
+                ..config()
+            },
+        )
+        .await?;
+        assert!(report.pages.iter().all(|page| page.error.is_none()));
+        if javascript {
+            assert_eq!(report.pages[0].links, std::slice::from_ref(&actual));
+            assert_eq!(report.pages.len(), 2);
+            assert_eq!(report.pages[1].url, actual);
+            assert_eq!(server.requests.lock().await.len(), 2);
+        } else {
+            assert!(report.pages[0].links.is_empty());
+            assert_eq!(report.pages[0].bytes, 0);
+            assert_eq!(report.pages.len(), 1);
+            assert_eq!(server.requests.lock().await.len(), 1);
+        }
+    }
+    Ok(())
 }
 
 #[tokio::test]
