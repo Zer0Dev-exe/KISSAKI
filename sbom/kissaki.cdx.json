@@ -2,9 +2,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
   "version": 1,
-  "serialNumber": "urn:uuid:53b1fbee-5a85-4f1b-bfc8-c3136c376530",
+  "serialNumber": "urn:uuid:cf8b323b-b6e0-402b-b86d-d8cd28c13068",
   "metadata": {
-    "timestamp": "2026-10-26T12:42:59.788868098Z",
+    "timestamp": "2026-10-26T13:25:55.561962118Z",
     "tools": [
       {
         "vendor": "CycloneDX",
@@ -17,7 +17,7 @@
       "bom-ref": "pkg:cargo/kissaki@0.1.0",
       "name": "kissaki",
       "version": "0.1.0",
-      "description": "A bounded, scope-aware web crawler in safe Rust, inspired by Katana",
+      "description": "Precise web discovery with explicit boundaries and predictable resource use",
       "scope": "required",
       "licenses": [
         {

@@ -3,7 +3,7 @@ name = "kissaki"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
-description = "A bounded, scope-aware web crawler in safe Rust, inspired by Katana"
+description = "Precise web discovery with explicit boundaries and predictable resource use"
 license = "MIT"
 repository = "https://github.com/Zer0Dev-exe/Kissaki"
 readme = "README.md"
@@ -29,6 +29,8 @@ unsafe_code = "forbid"
 [lints.clippy]
 dbg_macro = "deny"
 todo = "deny"
+cognitive_complexity = "deny"
+too_many_lines = "deny"
 
 [profile.release]
 lto = "thin"
