@@ -5,16 +5,34 @@
 [![CI](https://github.com/Zer0Dev-exe/Kissaki/actions/workflows/ci.yml/badge.svg)](https://github.com/Zer0Dev-exe/Kissaki/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A bounded, scope-aware HTTP crawler written in Rust, inspired by
-[ProjectDiscovery Katana](https://github.com/projectdiscovery/katana).
-Kissaki is an independent implementation, not an official Katana distribution
-or a complete port. See [the compatibility table and roadmap](docs/ROADMAP.md).
+**Precise discovery. Explicit boundaries.**
+
+Kissaki is a Rust web discovery tool for authorized reconnaissance: discover
+HTTP(S) endpoints, keep every request inside an explicit scope, and leave a
+machine-readable account of what happened. Its priorities are predictable work,
+safe defaults, and code that stays understandable as the project grows.
+
+Kissaki has its own architecture, release goals, and CLI contract; compatibility
+with another crawler is not its product specification. See the
+[roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), and
+[quality contract](docs/QUALITY.md).
 
 **Only crawl systems you own or have explicit permission to test.** GET requests
 can still have side effects on poorly designed applications. Rate limits and
 scope checks do not replace authorization or an isolated execution environment.
 
 ## Features
+
+### Design principles
+
+- **Precision before reach:** a discovered URL is not permission to fetch it.
+- **Bounded by design:** resource limits are validated, not merely suggested.
+- **Readable by default:** separate policy, scheduling, and HTTP transport;
+  prefer small functions over clever abstractions.
+- **Evidence over claims:** local regression fixtures, measured coverage, and
+  explicit limitations instead of unsupported security or performance promises.
+
+### Current capabilities
 
 - Async HTTP(S) crawling with bounded concurrency, queue, page count, depth,
   response bytes, extraction budget, per-request timeout, and crawl deadline.
@@ -107,6 +125,9 @@ cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
 cargo build --locked --release
+cargo install cargo-llvm-cov --version 0.9.1 --locked
+rustup component add llvm-tools-preview
+sh scripts/quality.sh
 cargo install cargo-audit --version 0.22.2 --locked
 cargo audit --deny warnings
 cargo install cargo-cyclonedx --version 0.5.9 --locked
@@ -130,6 +151,7 @@ not guarantee event eligibility or automatic acceptance of pull requests.
 
 ## License and attribution
 
-MIT. Katana's design and CLI workflow informed this project; no Go source is
+MIT. Historical inspiration is credited separately from Kissaki's identity.
+Katana's design and CLI workflow informed the initial project; no Go source is
 embedded or mechanically translated. See [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)
 and the preserved [upstream MIT notice](licenses/katana-MIT.txt).

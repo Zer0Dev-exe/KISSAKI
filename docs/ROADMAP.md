@@ -1,40 +1,44 @@
-# Katana adaptation and roadmap
+# Kissaki roadmap
 
-## Delivered in the initial Rust implementation
+## Product direction
 
-| Katana workflow | Kissaki equivalent | Notes |
-| --- | --- | --- |
-| URL/list/stdin input | `-u`, `-l`, stdin | Repeated seeds; absolute HTTP(S) only |
-| Crawl depth and concurrency | `-d`, `-c` | Finite, validated limits |
-| Timeout and duration | `--timeout`, `--crawl-timeout` | Async deadline; not process preemption |
-| Max response size | `--max-response-bytes` | Stream cap, decompression disabled |
-| Scope and regex filters | strict seeded origins, `--include`, `--exclude` | No implicit subdomain expansion |
-| JavaScript endpoint discovery | `--js-crawl` | Quoted absolute/root-relative strings only |
-| Ignore query variants | `--ignore-query-params` | Request still uses the original query |
-| Redirect control | `--max-redirects` | Manually validated hops |
-| Headers | `-H` | Seeded origins only; routing overrides rejected |
-| URL/JSON/file output | stdout, `--jsonl`, `-o` | Buffered report; exclusive file creation |
-| Form discovery | form action URLs | GET discovery only; no values submitted |
+Kissaki prioritizes precise, explainable HTTP discovery for authorized targets.
+Feature count is not a substitute for reliable boundaries, readable code, or
+reproducible results. Compatibility with another tool is not a release goal.
 
-These are analogous workflows, not flag-for-flag or output-schema compatibility.
-Kissaki uses a FIFO frontier with concurrent completion, not a strict BFS or DFS
-guarantee. The first discovered canonical URL wins, even if another route is
-shorter. HTTP errors are recorded; automatic retries are not implemented.
+## Available today
 
-## Not yet implemented
+- HTTP(S) discovery from explicit seeds, lists, and stdin.
+- Same-origin scope, validated connection DNS, manual redirect checks, and TLS
+  certificate verification.
+- Finite concurrency, page, depth, response, extraction, pacing, and time limits.
+- HTML resource and form-action discovery; optional quoted JavaScript endpoint
+  extraction without executing scripts or submitting form fields.
+- URL/JSONL output, regex filters, query deduplication, and exclusive output files.
+- Safe first-party Rust, local test fixtures, coverage checks, and a generated SBOM.
 
-1. Robots.txt policy handling and bounded sitemap parsing, with dedicated hostile
-   XML/robots fixtures. This is the next priority before general-purpose crawling.
-2. Structured form metadata and JavaScript AST extraction without execution.
-3. Incremental output, resumable state, stronger total-memory accounting,
-   path/extension output filters, and crawl statistics.
-4. Optional sandboxed browser/headless support with a separate threat model,
-   isolated browser profile, network interception, and explicit consent.
-5. Explicit subdomain allowlists, proxy/custom resolver modes preserving address
-   checks, and rate-limit-aware retries with a bounded request budget.
-6. Technology detection and response similarity filtering.
+The frontier is FIFO with concurrent completion, not a strict BFS/DFS guarantee.
+The first canonical URL discovered wins, even if a later route is shorter.
+Results are buffered until the crawl finishes. HTTP failures are recorded;
+automatic retries are not implemented.
 
-Katana's browser/XHR behavior, automatic form filling, TLS impersonation,
-knowledge-base/ML features, secret discovery/validation, and full CLI
-compatibility are **not** part of version 0.1.0. Do not describe this release as
-a complete Katana port. No third-party models or browsers are downloaded.
+## Next milestones
+
+1. **Responsible discovery:** robots.txt policy and bounded sitemap parsing,
+   backed by hostile XML/robots fixtures and explicit policy documentation.
+2. **Explainable results:** structured form metadata, discovery provenance, and
+   crawl statistics without submitting data or executing page code.
+3. **Longer runs:** incremental output, resumable state, and stronger total-memory
+   accounting with tested failure and cancellation semantics.
+4. **Controlled expansion:** explicit subdomain allowlists and bounded,
+   rate-limit-aware retries, preserving destination validation on every request.
+
+Each milestone needs regression tests, resource bounds, CLI documentation, and
+a threat-model review before release. No delivery dates are promised.
+
+## Deliberate boundaries
+
+Version 0.1.0 has no browser engine, JavaScript execution, automatic form filling,
+TLS impersonation, ML pipeline, or secret validation. No external browsers or
+models are downloaded. Headless browsing would require a separate isolation and
+network-interception design; it is not an implicit extension of this crawler.

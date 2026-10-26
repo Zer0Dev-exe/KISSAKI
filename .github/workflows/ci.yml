@@ -54,6 +54,24 @@ jobs:
       - run: cargo test --locked --all-targets
       - run: cargo build --locked --release
 
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          components: clippy, rustfmt, llvm-tools-preview
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a
+      - run: cargo install cargo-llvm-cov --version 0.9.1 --locked
+      - run: sh scripts/quality.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: kissaki-quality
+          path: target/quality/
+          if-no-files-found: error
+
   msrv:
     name: MSRV
     runs-on: ubuntu-latest

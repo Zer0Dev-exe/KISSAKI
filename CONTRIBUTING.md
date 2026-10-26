@@ -19,6 +19,10 @@ useful. Follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 ## Review standards
 
 - First-party Rust must retain `#![forbid(unsafe_code)]`.
+- Keep functions small and responsibilities separate; Clippy enforces cognitive
+  complexity of at most 15 and at most 80 code lines per function.
+- Preserve at least 90% production line coverage with meaningful regression
+  tests. See the [quality contract](docs/QUALITY.md) for commands and SonarQube.
 - Preserve scope checks before **every** request, including redirects.
 - Do not bypass the validated DNS resolver, certificate validation, or limits.
 - Bound any new parser, queue, retry policy, or response representation.
