@@ -3,6 +3,26 @@
 Welcome! Small, reviewed improvements and clear regression tests are especially
 useful. Follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
+**New here? Start with [your first contribution](docs/FIRST_CONTRIBUTION.md).**
+It covers setup, where code lives, local tests, and opening a focused PR.
+
+## Find your starting point
+
+- [Good first issues](https://github.com/Zer0Dev-exe/KISSAKI/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22)
+  have a narrow goal and acceptance criteria for newcomers.
+- [Help wanted](https://github.com/Zer0Dev-exe/KISSAKI/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22help%20wanted%22)
+  identifies work where another perspective is useful.
+- Tests, documentation, examples, and reproducible bug reports matter as much as
+  new flags. You can help without adding a feature or a dependency.
+- Ask setup or task-selection questions through the
+  [contribution-help form](https://github.com/Zer0Dev-exe/KISSAKI/issues/new?template=contribution_help.yml).
+  Include what you tried; do not include secrets or live target data.
+
+Check issue comments before starting so work is not duplicated. Small doc fixes
+do not need an issue first; discuss substantial changes before implementing them.
+Draft PRs can make a specific question easier to answer. Maintainers may request
+changes, and no response time or acceptance is guaranteed.
+
 ## Getting started
 
 1. Check existing issues and the [roadmap](docs/ROADMAP.md) before a large change.

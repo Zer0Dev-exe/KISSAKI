@@ -1,0 +1,34 @@
+name: Contribution help
+description: Ask about setup, a starter task, or finding your way around the code.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New contributors are welcome. Start with CONTRIBUTING.md and
+        docs/FIRST_CONTRIBUTION.md, then tell us where you are stuck.
+        Do not share credentials or private targets. Use Security → Report a
+        vulnerability for security findings, not this public form.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where would you like to help?
+      options:
+        - Rust code
+        - Tests and local fixtures
+        - Documentation and examples
+        - Setup or choosing a first task
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+      description: Link an existing task if relevant, explain what you tried, and ask a specific question.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (for setup problems)
+      description: OS, Rust version, and sanitized error output. Do not paste secrets.
