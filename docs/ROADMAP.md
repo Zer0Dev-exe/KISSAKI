@@ -8,13 +8,14 @@ reproducible results. Compatibility with another tool is not a release goal.
 
 ## Available today
 
-- HTTP(S) discovery from explicit seeds, lists, and stdin.
+- HTTP(S) discovery from explicit seeds, lists, and stdin with shared input budgets.
 - Same-origin scope, validated connection DNS, manual redirect checks, and TLS
   certificate verification.
 - Finite concurrency, page, depth, response, extraction, pacing, and time limits.
 - HTML resource and form-action discovery; optional quoted JavaScript endpoint
   extraction without executing scripts or submitting form fields.
-- URL/JSONL output, regex filters, query deduplication, and exclusive output files.
+- URL/JSONL output, optional strict HTTP failure reporting, regex filters, query
+  deduplication, and exclusive output files created only after seed validation.
 - Safe first-party Rust, local test fixtures, coverage checks, and a generated SBOM.
 
 The frontier is FIFO with concurrent completion, not a strict BFS/DFS guarantee.

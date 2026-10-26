@@ -1,6 +1,9 @@
 use std::{
+    fs,
     io::Write,
+    path::PathBuf,
     process::{Command, Stdio},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::Result;
@@ -9,6 +12,100 @@ fn command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_kissaki"));
     command.stdin(Stdio::null());
     command
+}
+
+struct InputFixture(PathBuf);
+
+impl InputFixture {
+    fn new() -> Result<Self> {
+        let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+        let directory =
+            std::env::temp_dir().join(format!("kissaki-input-{}-{unique}", std::process::id()));
+        fs::create_dir(&directory)?;
+        Ok(Self(directory))
+    }
+
+    fn path(&self, name: &str) -> PathBuf {
+        self.0.join(name)
+    }
+}
+
+impl Drop for InputFixture {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+#[test]
+fn invalid_seeds_do_not_create_output_files() -> Result<()> {
+    let fixture = InputFixture::new()?;
+    let output_path = fixture.path("output.txt");
+    for arguments in [
+        vec![],
+        vec!["-u", "http://127.0.0.1/"],
+        vec![
+            "-u",
+            "https://example.com/",
+            "-u",
+            "https://example.com/other",
+            "--max-pages",
+            "1",
+        ],
+    ] {
+        let output = command()
+            .args(arguments)
+            .arg("-o")
+            .arg(&output_path)
+            .output()?;
+        assert!(!output.status.success());
+        assert!(!output_path.exists());
+    }
+    Ok(())
+}
+
+#[test]
+fn list_files_share_one_input_byte_budget() -> Result<()> {
+    let fixture = InputFixture::new()?;
+    let first = fixture.path("first.txt");
+    let second = fixture.path("second.txt");
+    let output_path = fixture.path("output.txt");
+    fs::write(
+        &first,
+        format!("#{}\nhttps://example.com/\n", " ".repeat(600_000)),
+    )?;
+    fs::write(&second, format!("#{}\n", " ".repeat(600_000)))?;
+    let output = command()
+        .arg("-l")
+        .arg(first)
+        .arg("-l")
+        .arg(second)
+        .arg("-o")
+        .arg(&output_path)
+        .output()?;
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("combined target input exceeds 1 MiB")
+    );
+    assert!(!output_path.exists());
+    Ok(())
+}
+
+#[test]
+fn stdin_and_arguments_share_the_seed_count_budget() -> Result<()> {
+    let mut child = command()
+        .args(["-u", "https://example.com/", "--max-pages", "1"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    if let Some(mut input) = child.stdin.take() {
+        input.write_all(b"https://example.com/second\n")?;
+    }
+    let output = child.wait_with_output()?;
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("seed count exceeds max-pages"));
+    assert!(output.stdout.is_empty());
+    Ok(())
 }
 
 #[test]

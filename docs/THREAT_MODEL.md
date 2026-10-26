@@ -9,6 +9,9 @@ The operator and their CLI configuration are trusted; remote content is not.
 ## Controls
 
 - Validate HTTP(S), URL length, embedded credentials, and IP literals before use.
+- Apply a shared 1 MiB byte budget across CLI URL arguments, files, and stdin;
+  enforce seed counts while reading. Reject invalid seed input before output
+  creation. This does not bound argv allocation already performed by the OS/CLI.
 - Compare complete origins rather than substring or suffix matches.
 - Disable automatic redirects and proxies. Check each redirect before scheduling.
 - Use a custom connection resolver to reject non-public and mixed DNS answers;
@@ -19,6 +22,8 @@ The operator and their CLI configuration are trusted; remote content is not.
 - Cap active work, discovered/scheduled URLs, response bytes, links per response,
   redirect chains, depth, and deadlines. Do not decompress remote content.
 - Do not execute discovered code or submit forms/credentials automatically.
+- Do not extract links from HTTP 4xx/5xx bodies. Strict HTTP mode also marks these
+  observations as page errors; redirects missing Location always report errors.
 - Forbid unsafe code in first-party crates; lock dependencies, audit advisories,
   and generate a CycloneDX dependency inventory.
 
@@ -47,8 +52,10 @@ image. This project has not received an independent security audit.
 ## Regression coverage
 
 Unit tests cover special addresses, mapped IPv6, canonicalization, credential
-rejection, HTML entities/base URLs, discovery caps, and optional JS extraction.
+rejection, shared input budgets, HTML entities/base URLs, discovery caps, and
+optional JS extraction.
 Local HTTP tests cover scope, duplicate/cyclic URLs, depth/page/query limits,
 redirect limits, chunked/declared oversized bodies, timeouts, headers, request
-spacing, and JSON serialization. They deliberately do not contact public targets.
+spacing, HTTP error/redirect semantics, CLI exit status, exclusive output creation,
+and JSON serialization. They deliberately do not contact public targets.
 Live hostile DNS and TLS infrastructure are not exhaustively modeled.

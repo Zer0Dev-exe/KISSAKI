@@ -70,9 +70,17 @@ async fn read_page(client: &Client, job: &Job, config: &Config, page: &mut Page)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
     if matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
-        if let Some(location) = response.headers().get(LOCATION) {
-            let target = job.url.join(location.to_str()?)?;
-            page.redirect = Some(normalize_url(target.as_str())?);
+        let location = response
+            .headers()
+            .get(LOCATION)
+            .context("redirect response missing Location header")?;
+        let target = job.url.join(location.to_str()?)?;
+        page.redirect = Some(normalize_url(target.as_str())?);
+        return Ok(());
+    }
+    if response.status().is_client_error() || response.status().is_server_error() {
+        if config.fail_on_http_error {
+            response.error_for_status_ref()?;
         }
         return Ok(());
     }
