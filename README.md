@@ -10,6 +10,7 @@
 **Precise discovery. Explicit boundaries.**
 
 [Try it locally](#try-it-locally) · [First contribution](docs/FIRST_CONTRIBUTION.md) ·
+[Rust library](docs/LIBRARY.md) ·
 [Good first issues](https://github.com/Zer0Dev-exe/KISSAKI/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22) ·
 [Roadmap](docs/ROADMAP.md) · [Security](SECURITY.md)
 
@@ -181,6 +182,8 @@ DNS/parser work is not preemptible by the async crawl deadline.
 cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
+cargo test --locked --doc
+RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --lib
 cargo build --locked --release
 cargo install cargo-llvm-cov --version 0.9.1 --locked
 rustup component add llvm-tools-preview

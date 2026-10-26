@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![doc = include_str!("../docs/LIBRARY.md")]
 
 mod config;
 pub mod crawler;

@@ -51,6 +51,8 @@ changes, and no response time or acceptance is guaranteed.
 - New features need tests, CLI help, documentation, and explicit threat-model
   updates where relevant. Avoid unrelated formatting or refactors.
 - All CI checks must pass before merging; maintainers may request changes.
+- Keep the [library guide](docs/LIBRARY.md) examples valid with
+  `cargo test --locked --doc`; the all-target command does not test them.
 
 ## Hacktoberfest
 
