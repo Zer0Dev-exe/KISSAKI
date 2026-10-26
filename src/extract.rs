@@ -82,17 +82,14 @@ pub(crate) fn extract_links_where(
         ignore_query,
         accept: &accept,
     };
-    let javascript = match mode {
-        ExtractionMode::Html { javascript } => {
-            extract_html(base, body, &mut links);
-            javascript
-        }
-        ExtractionMode::JavaScript => true,
+    let (javascript, resolution_base) = match mode {
+        ExtractionMode::Html { javascript } => (javascript, extract_html(base, body, &mut links)),
+        ExtractionMode::JavaScript => (true, base.clone()),
     };
     if javascript && !links.is_full() {
         for capture in JAVASCRIPT_URLS.captures_iter(body) {
             if let Some(value) = capture.get(1) {
-                links.add(value.as_str(), base);
+                links.add(value.as_str(), &resolution_base);
             }
             if links.is_full() {
                 break;
@@ -102,7 +99,7 @@ pub(crate) fn extract_links_where(
     links.urls
 }
 
-fn extract_html(base: &Url, body: &str, links: &mut Links<'_>) {
+fn extract_html(base: &Url, body: &str, links: &mut Links<'_>) -> Url {
     let html = Html::parse_document(body);
     let document_base = html
         .select(&BASE_SELECTOR)
@@ -125,6 +122,7 @@ fn extract_html(base: &Url, body: &str, links: &mut Links<'_>) {
             break;
         }
     }
+    document_base
 }
 
 #[cfg(test)]

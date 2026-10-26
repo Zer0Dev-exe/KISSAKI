@@ -55,6 +55,11 @@ Internal modules are concrete types, not a framework of traits and factories.
   JavaScript MIME bodies never enter the HTML parser; markup in script strings
   must not create relative HTML links or consume their budget. HTML retains its
   optional JavaScript-string scan. Unsupported MIME types are never sniffed.
+- HTML extraction returns its effective document base for the optional string
+  scan as well as attribute resolution. Resolve candidates before admission;
+  an external base must not turn root-relative paths into seed-origin requests.
+  JavaScript-only mode keeps the response URL as its base and ignores HTML
+  template semantics.
 - The HTTP client never follows redirects or environment proxies independently.
 - Automatic decompression is explicitly disabled even under Cargo feature
   unification. Requests prefer identity encoding without replacing a custom

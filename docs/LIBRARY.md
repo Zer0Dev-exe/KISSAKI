@@ -129,6 +129,10 @@ framing, and proxy headers are rejected. Kissaki does not maintain a browser
 session or execute JavaScript; `javascript` only enables string-based endpoint
 discovery. For JavaScript MIME responses it never invokes the HTML parser;
 HTML responses can still combine HTML discovery with the optional string scan.
+Both scans use the effective HTML document base before scope filtering. A base
+with a different origin does not expand the seeded scope. JavaScript MIME bodies
+still resolve heuristic candidates against their response URL; strings containing
+HTML base elements do not alter that mode.
 Custom Accept-Encoding headers are preserved, but encoded bodies are not decoded.
 
 ## Extract links without making requests
