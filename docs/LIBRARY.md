@@ -45,6 +45,9 @@ fn main() -> Result<()> {
   memory. Reports, concurrent bodies, and parsed DOMs consume additional memory.
 - `max_links_per_page` caps unique accepted links. Rejected candidates still
   consume bounded-body parsing and policy-checking CPU.
+- `ignore_query` uses query-insensitive keys for both extraction budgets and
+  scheduling. The first accepted URL retains its query in requests and reports;
+  scope and regex filters inspect original queries before deduplication.
 - `request_timeout` applies to a dispatched request, including body reading.
   `crawl_timeout` bounds asynchronous crawling including pacing; synchronous
   parsing and some resolver work cannot be preempted by that deadline.
@@ -130,7 +133,8 @@ Custom Accept-Encoding headers are preserved, but encoded bodies are not decoded
 ## Extract links without making requests
 
 `extract::extract_links` normalizes, deduplicates, and limits discoveries, but
-it is intentionally **unscoped** and does not cap its caller-supplied body.
+it is intentionally **unscoped**, distinguishes query variants, and does not cap
+its caller-supplied body.
 The body is parsed synchronously. This helper can return external or private
 destinations; do not schedule its output without a complete request policy.
 

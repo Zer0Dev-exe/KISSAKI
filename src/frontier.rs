@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::{
     Config, Page,
-    policy::{normalize_url, validate_destination},
+    policy::{deduplication_key, normalize_url, validate_destination},
     scope::Scope,
 };
 
@@ -104,10 +104,7 @@ impl<'config> Frontier<'config> {
         if !self.allows(&job.url) {
             return;
         }
-        let mut key = job.url.clone();
-        if self.config.ignore_query {
-            key.set_query(None);
-        }
+        let key = deduplication_key(&job.url, self.config.ignore_query);
         if self.seen.contains(&key) {
             return;
         }

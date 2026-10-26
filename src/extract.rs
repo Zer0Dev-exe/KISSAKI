@@ -4,7 +4,7 @@ use regex::Regex;
 use scraper::{Html, Selector};
 use url::Url;
 
-use crate::policy::normalize_url;
+use crate::policy::{deduplication_key, normalize_url};
 
 static BASE_SELECTOR: LazyLock<Selector> =
     LazyLock::new(|| Selector::parse("base[href]").expect("valid built-in base selector"));
@@ -23,6 +23,7 @@ struct Links<'filter> {
     urls: Vec<Url>,
     seen: HashSet<Url>,
     limit: usize,
+    ignore_query: bool,
     accept: &'filter dyn Fn(&Url) -> bool,
 }
 
@@ -39,7 +40,7 @@ impl Links<'_> {
         if let Ok(joined) = base.join(value)
             && let Ok(url) = normalize_url(joined.as_str())
             && (self.accept)(&url)
-            && self.seen.insert(url.clone())
+            && self.seen.insert(deduplication_key(&url, self.ignore_query))
         {
             self.urls.push(url);
         }
@@ -47,7 +48,7 @@ impl Links<'_> {
 }
 
 pub fn extract_links(base: &Url, body: &str, javascript: bool, limit: usize) -> Vec<Url> {
-    extract_links_where(base, body, javascript, limit, |_| true)
+    extract_links_where(base, body, javascript, limit, false, |_| true)
 }
 
 pub(crate) fn extract_links_where(
@@ -55,6 +56,7 @@ pub(crate) fn extract_links_where(
     body: &str,
     javascript: bool,
     limit: usize,
+    ignore_query: bool,
     accept: impl Fn(&Url) -> bool,
 ) -> Vec<Url> {
     if limit == 0 {
@@ -64,6 +66,7 @@ pub(crate) fn extract_links_where(
         urls: Vec::new(),
         seen: HashSet::new(),
         limit,
+        ignore_query,
         accept: &accept,
     };
     extract_html(base, body, &mut links);

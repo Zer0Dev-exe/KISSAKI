@@ -112,6 +112,7 @@ async fn read_page(
             &String::from_utf8_lossy(&body),
             config.javascript,
             config.max_links_per_page,
+            config.ignore_query,
             |url| scope.allows(url),
         );
     }

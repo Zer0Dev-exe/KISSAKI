@@ -159,6 +159,30 @@ fn blocks_special_address_ranges_and_mapped_ipv4() -> Result<()> {
 }
 
 #[test]
+fn query_insensitive_keys_preserve_original_urls_and_other_url_components() -> Result<()> {
+    let original = normalize_url("https://example.com/path?first=1#fragment")?;
+    assert_eq!(deduplication_key(&original, false), original);
+    let key = deduplication_key(&original, true);
+    assert_eq!(key.as_str(), "https://example.com/path");
+    assert_eq!(original.query(), Some("first=1"));
+    for value in [
+        "https://example.com/path?",
+        "https://example.com/path?second=2",
+    ] {
+        assert_eq!(deduplication_key(&normalize_url(value)?, true), key);
+    }
+    for value in [
+        "http://example.com/path?first=1",
+        "https://other.example/path?first=1",
+        "https://example.com:444/path?first=1",
+        "https://example.com/other?first=1",
+    ] {
+        assert_ne!(deduplication_key(&normalize_url(value)?, true), key);
+    }
+    Ok(())
+}
+
+#[test]
 fn private_access_requires_explicit_opt_in() -> Result<()> {
     let url = normalize_url("http://127.0.0.1/")?;
     assert!(validate_destination(&url, false).is_err());

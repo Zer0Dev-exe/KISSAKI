@@ -71,10 +71,14 @@ impl Server {
                         "/post" => ("200 OK", "", "<form method='post' action='/endpoint'><input name='secret'></form>".to_owned()),
                         "/scope-noise" => ("200 OK", "", "<a href='http://127.0.0.1:1/nope'>outside</a><a href='/blocked'>excluded</a><a href='/ignored'>not included</a><a href='/kept'>allowed</a>".to_owned()),
                         "/scope-noise.js" => ("200 OK", "", "fetch('http://127.0.0.1:1/nope');fetch('/blocked');fetch('/ignored');fetch('/kept');".to_owned()),
+                        "/query-noise" => ("200 OK", "", "<a href='/variant?first=1'>first</a><a href='/variant?second=2'>duplicate</a><a href='/kept'>distinct</a>".to_owned()),
+                        "/query-noise.js" => ("200 OK", "", "fetch('/variant?first=1');fetch('/variant?second=2');fetch('/kept');".to_owned()),
                         _ => ("200 OK", "", "done".to_owned()),
                     };
                     let content_type = match path.as_str() {
-                        "/app.js" | "/scope-noise.js" => "application/javascript",
+                        "/app.js" | "/scope-noise.js" | "/query-noise.js" => {
+                            "application/javascript"
+                        }
                         "/binary-error" => "application/octet-stream",
                         _ => "text/html",
                     };
@@ -108,6 +112,36 @@ fn config() -> Config {
         delay: Duration::ZERO,
         ..Config::default()
     }
+}
+
+#[tokio::test]
+async fn ignored_query_variants_do_not_starve_distinct_html_or_javascript_links() -> Result<()> {
+    for (path, javascript) in [("/query-noise", false), ("/query-noise.js", true)] {
+        let server = Server::start().await?;
+        let variant = server.url("/variant?first=1")?;
+        let kept = server.url("/kept")?;
+        let report = crawl(
+            vec![server.url(path)?],
+            Config {
+                max_links_per_page: 2,
+                ignore_query: true,
+                javascript,
+                ..config()
+            },
+        )
+        .await?;
+        assert_eq!(
+            report.pages[0].links,
+            [variant.clone(), kept.clone()],
+            "{path}"
+        );
+        assert_eq!(report.pages.len(), 3, "{path}");
+        assert!(report.pages.iter().any(|page| page.url == variant));
+        assert!(report.pages.iter().any(|page| page.url == kept));
+        assert!(report.pages.iter().all(|page| page.error.is_none()));
+        assert_eq!(server.requests.lock().await.len(), 3);
+    }
+    Ok(())
 }
 
 #[tokio::test]
