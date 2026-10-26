@@ -1,4 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#db2777"/>
-  <text x="32" y="32" dy="0.35em" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="32" font-weight="600" fill="#ffffff">K</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">Kissaki</title>
+  <desc id="description">A sharp silver katana slicing an emerald leaf in two, on a transparent background.</desc>
+  <defs>
+    <linearGradient id="leaf-upper" x1="99" y1="109" x2="285" y2="313" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A1F5D1"/>
+      <stop offset="1" stop-color="#19B58A"/>
+    </linearGradient>
+    <linearGradient id="leaf-lower" x1="240" y1="230" x2="420" y2="414" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#54E2AD"/>
+      <stop offset="1" stop-color="#0A8F70"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="241" y1="260" x2="275" y2="262" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.48" stop-color="#E7F5FA"/>
+      <stop offset="0.52" stop-color="#AACCD9"/>
+      <stop offset="1" stop-color="#D2E7EF"/>
+    </linearGradient>
+    <linearGradient id="copper" x1="220" y1="147" x2="288" y2="163" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD19B"/>
+      <stop offset="1" stop-color="#D97643"/>
+    </linearGradient>
+  </defs>
+  <path d="M87 104C183 91 274 99 319 155L175 339C104 293 73 204 87 104Z" fill="url(#leaf-upper)" stroke="#16493F" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M111 128L241 252M148 165L153 253M182 197L248 185M214 228L211 295" stroke="#147F67" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"/>
+  <path d="M337 185C398 240 433 328 419 415C319 427 239 410 192 369L337 185Z" fill="url(#leaf-lower)" stroke="#16493F" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M286 287L396 392M309 311L371 299M338 338L339 392M365 365L409 354" stroke="#B1F7D6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+  <path d="M319 155L175 339" stroke="#D4FFE8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M337 185L192 369" stroke="#BAF9D8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M122 336L101 358M148 361L137 375" stroke="#4DD9B3" stroke-width="6" stroke-linecap="round"/>
+  <path d="M357 160L375 140M372 183L396 170" stroke="#F4AA6D" stroke-width="5" stroke-linecap="round"/>
+  <g transform="rotate(38 256 256)">
+    <path d="M244 159C242 257 238 389 254 474C274 427 281 296 270 159H244Z" fill="url(#steel)" stroke="#263D52" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M251 176C248 272 247 378 254 447" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M263 178C268 256 260 277 266 303C269 327 260 342 264 365C267 390 259 414 257 438" stroke="#7EA6B8" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <path d="M244 44Q256 38 268 44L270 145H242L244 44Z" fill="#21354A" stroke="#152739" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M246 58L266 72L245 86L268 101L244 116L268 131M266 58L245 72L267 86L244 101L268 116L244 131" stroke="#EEAA77" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M243 42Q256 36 269 42L269 52H243V42Z" fill="url(#copper)" stroke="#263D52" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M242 135H270V149H242V135Z" fill="url(#copper)" stroke="#263D52" stroke-width="4"/>
+    <path d="M222 149Q256 139 290 149L287 159Q256 168 225 159L222 149Z" fill="url(#copper)" stroke="#263D52" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M233 150Q256 145 279 150" stroke="#FFE6BD" stroke-width="3" stroke-linecap="round"/>
+    <path d="M246 166H268L269 182H246V166Z" fill="#EBA86C" stroke="#263D52" stroke-width="3"/>
+  </g>
 </svg>

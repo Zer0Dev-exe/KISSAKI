@@ -1,6 +1,6 @@
-<img src="assets/icon.svg" width="64" height="64" alt="Kissaki">
-
-# Kissaki
+<h1 align="center">
+  <img src="assets/kissaki-logo.svg" width="720" height="202" alt="KISSAKI — a sharp katana slicing an emerald leaf">
+</h1>
 
 [![CI](https://github.com/Zer0Dev-exe/Kissaki/actions/workflows/ci.yml/badge.svg)](https://github.com/Zer0Dev-exe/Kissaki/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
