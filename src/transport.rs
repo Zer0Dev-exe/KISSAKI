@@ -99,7 +99,9 @@ async fn read_page(
         }
         return Ok(());
     }
-    if !is_extractable(page.content_type.as_deref(), config.javascript) {
+    if matches!(response.status().as_u16(), 204 | 205 | 304)
+        || !is_extractable(page.content_type.as_deref(), config.javascript)
+    {
         return Ok(());
     }
     validate_content_encoding(response.headers())?;
