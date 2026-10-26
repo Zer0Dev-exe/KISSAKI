@@ -51,6 +51,10 @@ Internal modules are concrete types, not a framework of traits and factories.
 - The extractor caches built-in selectors/patterns, stops collecting after its
   unique-link budget is full, and skips JavaScript scanning when HTML fills it.
   DOM parsing itself still processes the bounded body and is not preemptible.
+- MIME classification selects an explicit HTML or JavaScript extraction mode.
+  JavaScript MIME bodies never enter the HTML parser; markup in script strings
+  must not create relative HTML links or consume their budget. HTML retains its
+  optional JavaScript-string scan. Unsupported MIME types are never sniffed.
 - The HTTP client never follows redirects or environment proxies independently.
 - Automatic decompression is explicitly disabled even under Cargo feature
   unification. Requests prefer identity encoding without replacing a custom

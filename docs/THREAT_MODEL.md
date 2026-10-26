@@ -31,6 +31,8 @@ The operator and their CLI configuration are trusted; remote content is not.
   enable them. Prefer identity encoding and reject non-identity encodings before
   reading extractable bodies. Skip non-extractable binary bodies unchanged.
 - Do not execute discovered code or submit forms/credentials automatically.
+- Select parsing by MIME. Scan opt-in JavaScript bodies only for quoted endpoint
+  strings, without building a DOM or interpreting template strings as HTML.
 - Do not extract links from HTTP 4xx/5xx bodies. Strict HTTP mode also marks these
   observations as page errors; redirects missing Location always report errors.
 - Skip response bodies for 204/205/304 before validating content encodings. Keep
@@ -59,6 +61,10 @@ for hostile multi-tenant use. No such service is shipped by this repository.
 Rejected link candidates still consume parsing and policy-checking CPU within
 the response byte limit. The per-page link budget bounds retained accepted URLs,
 not the number of inspected attributes or a hard CPU allowance.
+
+JavaScript discovery is a lexical heuristic, not execution or an AST-based model
+of network calls. Quoted absolute/root-relative strings can be false positives;
+constructed, escaped, or bare-relative endpoints can be missed.
 
 Transitive unsafe code, malicious dependency updates, compiler/runtime defects,
 and TLS/OS vulnerabilities are outside first-party memory-safety enforcement.

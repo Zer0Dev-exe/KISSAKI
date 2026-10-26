@@ -19,6 +19,12 @@ static JAVASCRIPT_URLS: LazyLock<Regex> = LazyLock::new(|| {
         .expect("valid built-in JavaScript URL pattern")
 });
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ExtractionMode {
+    Html { javascript: bool },
+    JavaScript,
+}
+
 struct Links<'filter> {
     urls: Vec<Url>,
     seen: HashSet<Url>,
@@ -48,13 +54,20 @@ impl Links<'_> {
 }
 
 pub fn extract_links(base: &Url, body: &str, javascript: bool, limit: usize) -> Vec<Url> {
-    extract_links_where(base, body, javascript, limit, false, |_| true)
+    extract_links_where(
+        base,
+        body,
+        ExtractionMode::Html { javascript },
+        limit,
+        false,
+        |_| true,
+    )
 }
 
 pub(crate) fn extract_links_where(
     base: &Url,
     body: &str,
-    javascript: bool,
+    mode: ExtractionMode,
     limit: usize,
     ignore_query: bool,
     accept: impl Fn(&Url) -> bool,
@@ -69,7 +82,13 @@ pub(crate) fn extract_links_where(
         ignore_query,
         accept: &accept,
     };
-    extract_html(base, body, &mut links);
+    let javascript = match mode {
+        ExtractionMode::Html { javascript } => {
+            extract_html(base, body, &mut links);
+            javascript
+        }
+        ExtractionMode::JavaScript => true,
+    };
     if javascript && !links.is_full() {
         for capture in JAVASCRIPT_URLS.captures_iter(body) {
             if let Some(value) = capture.get(1) {

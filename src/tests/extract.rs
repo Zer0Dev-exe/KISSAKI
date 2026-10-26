@@ -2,6 +2,29 @@ use super::*;
 use anyhow::Result;
 
 #[test]
+fn raw_javascript_skips_html_templates_and_retains_filter_and_budget_rules() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = r#"const template = "<a href='phantom'>unused</a>";
+        fetch('/blocked'); fetch('/actual?first=1'); fetch('/actual?second=2'); fetch('/kept');"#;
+    let links = extract_links_where(&base, body, ExtractionMode::JavaScript, 2, true, |url| {
+        url.path() != "/blocked"
+    });
+    assert_eq!(links, [base.join("/actual?first=1")?, base.join("/kept")?]);
+    assert!(
+        extract_links_where(
+            &base,
+            body,
+            ExtractionMode::JavaScript,
+            0,
+            true,
+            |_| panic!("zero budget must skip JavaScript extraction"),
+        )
+        .is_empty()
+    );
+    Ok(())
+}
+
+#[test]
 fn malformed_markup_remains_bounded() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     for body in [
@@ -109,7 +132,14 @@ fn invalid_document_base_falls_back_to_the_response_url() -> Result<()> {
 fn rejected_html_does_not_exhaust_the_javascript_budget() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body = "<a href='https://outside.invalid/nope'>outside</a><a href='/blocked'>filtered</a><script>fetch('/kept');fetch('/later');</script>";
-    let links = extract_links_where(&base, body, true, 1, false, |url| url.path() == "/kept");
+    let links = extract_links_where(
+        &base,
+        body,
+        ExtractionMode::Html { javascript: true },
+        1,
+        false,
+        |url| url.path() == "/kept",
+    );
     assert_eq!(links, [base.join("/kept")?]);
     Ok(())
 }
@@ -118,9 +148,14 @@ fn rejected_html_does_not_exhaust_the_javascript_budget() -> Result<()> {
 fn an_external_base_does_not_hide_later_permitted_absolute_links() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body = "<base href='https://outside.invalid/'><a href='relative'>outside</a><a href='https://example.com/kept'>allowed</a>";
-    let links = extract_links_where(&base, body, false, 1, false, |url| {
-        url.origin() == base.origin()
-    });
+    let links = extract_links_where(
+        &base,
+        body,
+        ExtractionMode::Html { javascript: false },
+        1,
+        false,
+        |url| url.origin() == base.origin(),
+    );
     assert_eq!(links, [base.join("/kept")?]);
     Ok(())
 }
@@ -153,7 +188,14 @@ fn query_insensitive_discovery_counts_equivalent_links_once_and_keeps_first_url(
     ] {
         let first = base.join("/variant?first=1")?;
         assert_eq!(
-            extract_links_where(&base, body, javascript, 2, true, |_| true),
+            extract_links_where(
+                &base,
+                body,
+                ExtractionMode::Html { javascript },
+                2,
+                true,
+                |_| true
+            ),
             [first.clone(), base.join("/kept")?]
         );
         assert_eq!(
@@ -169,9 +211,14 @@ fn filters_see_original_queries_before_deduplication() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body =
         "<a href='/variant?blocked=1'></a><a href='/variant?allowed=2'></a><a href='/kept'></a>";
-    let links = extract_links_where(&base, body, false, 2, true, |url| {
-        url.query() != Some("blocked=1")
-    });
+    let links = extract_links_where(
+        &base,
+        body,
+        ExtractionMode::Html { javascript: false },
+        2,
+        true,
+        |url| url.query() != Some("blocked=1"),
+    );
     assert_eq!(
         links,
         [base.join("/variant?allowed=2")?, base.join("/kept")?]
@@ -183,11 +230,26 @@ fn filters_see_original_queries_before_deduplication() -> Result<()> {
 fn a_rejecting_predicate_does_not_retain_any_html_or_javascript_links() -> Result<()> {
     let base = Url::parse("https://example.com/")?;
     let body = "<a href='/first'>html</a><script>fetch('/second');</script>";
-    assert!(extract_links_where(&base, body, true, 1, false, |_| false).is_empty());
     assert!(
-        extract_links_where(&base, body, true, 0, false, |_| panic!(
-            "zero budget must skip extraction"
-        ))
+        extract_links_where(
+            &base,
+            body,
+            ExtractionMode::Html { javascript: true },
+            1,
+            false,
+            |_| false
+        )
+        .is_empty()
+    );
+    assert!(
+        extract_links_where(
+            &base,
+            body,
+            ExtractionMode::Html { javascript: true },
+            0,
+            false,
+            |_| panic!("zero budget must skip extraction")
+        )
         .is_empty()
     );
     Ok(())

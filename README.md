@@ -71,7 +71,8 @@ No need to pretend you already know the codebase.
   Mixed public/private DNS results are rejected. Environment proxies are ignored.
 - HTML links, resource URLs, base URLs, and form action discovery (GET only;
   no field submission). Optional heuristic extraction of quoted JavaScript URLs,
-  without executing scripts.
+  without executing scripts. JavaScript MIME responses use only the quoted-URL
+  scanner, never the HTML DOM parser, and are skipped unless `--js-crawl` is set.
 - Repeated `-u`, target lists, stdin, URL deduplication, regex filters,
   query-insensitive deduplication, plain URL output, and structured JSONL output.
 - TLS certificate verification stays enabled; no insecure TLS flag.

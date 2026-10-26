@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::{
     Config, Page,
-    extract::extract_links_where,
+    extract::{ExtractionMode, extract_links_where},
     frontier::Job,
     policy::{normalize_url, resolver},
     scope::Scope,
@@ -99,18 +99,19 @@ async fn read_page(
         }
         return Ok(());
     }
-    if matches!(response.status().as_u16(), 204 | 205 | 304)
-        || !is_extractable(page.content_type.as_deref(), config.javascript)
-    {
+    if matches!(response.status().as_u16(), 204 | 205 | 304) {
         return Ok(());
     }
+    let Some(mode) = extraction_mode(page.content_type.as_deref(), config.javascript) else {
+        return Ok(());
+    };
     validate_content_encoding(response.headers())?;
     let body = read_body(response, config.max_response_bytes, &mut page.bytes).await?;
     if job.depth < config.depth {
         page.links = extract_links_where(
             &job.url,
             &String::from_utf8_lossy(&body),
-            config.javascript,
+            mode,
             config.max_links_per_page,
             config.ignore_query,
             |url| scope.allows(url),
@@ -131,7 +132,7 @@ fn validate_content_encoding(headers: &HeaderMap) -> Result<()> {
     Ok(())
 }
 
-fn is_extractable(content_type: Option<&str>, javascript: bool) -> bool {
+fn extraction_mode(content_type: Option<&str>, javascript: bool) -> Option<ExtractionMode> {
     let mime = content_type
         .unwrap_or("")
         .split(';')
@@ -144,12 +145,20 @@ fn is_extractable(content_type: Option<&str>, javascript: bool) -> bool {
         "text/javascript",
         "application/x-javascript",
     ];
-    html.iter()
+    if html
+        .iter()
         .any(|candidate| mime.eq_ignore_ascii_case(candidate))
-        || (javascript
-            && scripts
-                .iter()
-                .any(|candidate| mime.eq_ignore_ascii_case(candidate)))
+    {
+        Some(ExtractionMode::Html { javascript })
+    } else if javascript
+        && scripts
+            .iter()
+            .any(|candidate| mime.eq_ignore_ascii_case(candidate))
+    {
+        Some(ExtractionMode::JavaScript)
+    } else {
+        None
+    }
 }
 
 async fn read_body(response: Response, limit: usize, bytes: &mut usize) -> Result<Vec<u8>> {
