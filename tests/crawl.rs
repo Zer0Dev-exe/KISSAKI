@@ -426,6 +426,26 @@ async fn refuses_private_targets_by_default() -> Result<()> {
 }
 
 #[tokio::test]
+async fn pages_at_the_depth_limit_skip_body_reading() -> Result<()> {
+    let server = Server::start().await?;
+    for path in ["/huge", "/chunked"] {
+        let report = crawl(
+            vec![server.url(path)?],
+            Config {
+                depth: 0,
+                max_response_bytes: 128,
+                ..config()
+            },
+        )
+        .await?;
+        assert_eq!(report.pages[0].status, Some(200));
+        assert!(report.pages[0].error.is_none());
+        assert_eq!(report.pages[0].bytes, 0);
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn limits_declared_and_chunked_bodies() -> Result<()> {
     let server = Server::start().await?;
     for path in ["/huge", "/chunked"] {

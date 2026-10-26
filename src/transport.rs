@@ -102,21 +102,22 @@ async fn read_page(
     if matches!(response.status().as_u16(), 204 | 205 | 304) {
         return Ok(());
     }
+    if job.depth >= config.depth {
+        return Ok(());
+    }
     let Some(mode) = extraction_mode(page.content_type.as_deref(), config.javascript) else {
         return Ok(());
     };
     validate_content_encoding(response.headers())?;
     let body = read_body(response, config.max_response_bytes, &mut page.bytes).await?;
-    if job.depth < config.depth {
-        page.links = extract_links_where(
-            &job.url,
-            &String::from_utf8_lossy(&body),
-            mode,
-            config.max_links_per_page,
-            config.ignore_query,
-            |url| scope.allows(url),
-        );
-    }
+    page.links = extract_links_where(
+        &job.url,
+        &String::from_utf8_lossy(&body),
+        mode,
+        config.max_links_per_page,
+        config.ignore_query,
+        |url| scope.allows(url),
+    );
     Ok(())
 }
 

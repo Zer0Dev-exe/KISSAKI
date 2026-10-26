@@ -36,7 +36,9 @@ fn main() -> Result<()> {
 ```
 
 - Seed depth is zero. `depth` bounds followed links; redirects retain depth and
-  have a separate `max_redirects` budget.
+  have a separate `max_redirects` budget. Pages at the depth limit keep their
+  response metadata but skip body reading, so they report zero bytes and cannot
+  fail on size or encoding checks.
 - `max_pages` bounds admitted unique jobs, including seeds and redirects, not
   just successful pages. Input seeds are counted before deduplication.
 - `concurrency` caps pending jobs, while `delay` spaces request dispatches
