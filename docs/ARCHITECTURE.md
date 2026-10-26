@@ -26,7 +26,8 @@ Internal modules are concrete types, not a framework of traits and factories.
    public/private answers unless private access was explicitly enabled.
 5. Preserve HTTP error status without parsing error bodies. Optional strict HTTP
    mode records these as page errors. Read only supported successful content
-   types within the response byte limit; never execute discovered content.
+   types within the response byte limit; reject non-identity content encodings
+   before reading extractable bodies. Never execute discovered content.
 6. Filter extracted candidates through the shared scope before counting unique
    links toward the per-page budget. The frontier rechecks admission before
    scheduling. Treat redirects as new admission decisions, retaining depth and
@@ -45,6 +46,10 @@ Internal modules are concrete types, not a framework of traits and factories.
   unique-link budget is full, and skips JavaScript scanning when HTML fills it.
   DOM parsing itself still processes the bounded body and is not preemptible.
 - The HTTP client never follows redirects or environment proxies independently.
+- Automatic decompression is explicitly disabled even under Cargo feature
+  unification. Requests prefer identity encoding without replacing a custom
+  Accept-Encoding header. Validate every Content-Encoding header/list entry;
+  unsupported encodings are errors, not successful empty discovery results.
 - TLS verification and the actual-connection DNS validator remain enabled.
 - First-party code forbids `unsafe`; dependency code is outside that guarantee.
 - Limits bound work, not total process memory. OS/container limits are still

@@ -3,6 +3,7 @@ use std::{
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -16,11 +17,19 @@ fn command() -> Command {
 
 struct InputFixture(PathBuf);
 
+static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
+
 impl InputFixture {
     fn new() -> Result<Self> {
-        let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
-        let directory =
-            std::env::temp_dir().join(format!("kissaki-input-{}-{unique}", std::process::id()));
+        Self::at(SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos())
+    }
+
+    fn at(timestamp: u128) -> Result<Self> {
+        let sequence = NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed);
+        let directory = std::env::temp_dir().join(format!(
+            "kissaki-input-{}-{timestamp}-{sequence}",
+            std::process::id()
+        ));
         fs::create_dir(&directory)?;
         Ok(Self(directory))
     }
@@ -28,6 +37,18 @@ impl InputFixture {
     fn path(&self, name: &str) -> PathBuf {
         self.0.join(name)
     }
+}
+
+#[test]
+fn fixtures_with_identical_clock_ticks_remain_isolated() -> Result<()> {
+    let first = InputFixture::at(0)?;
+    let second = InputFixture::at(0)?;
+    assert_ne!(first.0, second.0);
+    fs::write(first.path("first.txt"), "first fixture")?;
+    assert!(!second.path("first.txt").exists());
+    drop(first);
+    assert!(second.0.is_dir());
+    Ok(())
 }
 
 impl Drop for InputFixture {
