@@ -115,6 +115,47 @@ fn javascript_shares_the_html_budget_and_stops_at_the_limit() -> Result<()> {
 }
 
 #[test]
+fn html_javascript_uses_the_same_document_base_as_html_attributes() -> Result<()> {
+    let base = Url::parse("https://example.com/page/")?;
+    let body = "<base href=https://outside.invalid/sub/><a href='/asset'></a><script>fetch('/endpoint');</script>";
+    assert_eq!(
+        extract_links(&base, body, true, 10),
+        [
+            Url::parse("https://outside.invalid/asset")?,
+            Url::parse("https://outside.invalid/endpoint")?
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn html_javascript_filters_base_resolved_paths_before_counting_links() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = "<base href='https://outside.invalid/'><a href='relative'></a><script>fetch('/phantom');fetch('https://example.com/kept');</script>";
+    let links = extract_links_where(
+        &base,
+        body,
+        ExtractionMode::Html { javascript: true },
+        1,
+        false,
+        |url| url.origin() == base.origin(),
+    );
+    assert_eq!(links, [base.join("/kept")?]);
+    Ok(())
+}
+
+#[test]
+fn javascript_mime_does_not_apply_html_base_templates() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = r#"const template = "<base href='https://outside.invalid/'>"; fetch('/actual');"#;
+    let links = extract_links_where(&base, body, ExtractionMode::JavaScript, 1, false, |url| {
+        url.origin() == base.origin()
+    });
+    assert_eq!(links, [base.join("/actual")?]);
+    Ok(())
+}
+
+#[test]
 fn invalid_document_base_falls_back_to_the_response_url() -> Result<()> {
     let base = Url::parse("https://example.com/path/")?;
     for value in [

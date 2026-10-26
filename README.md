@@ -73,6 +73,8 @@ No need to pretend you already know the codebase.
   no field submission). Optional heuristic extraction of quoted JavaScript URLs,
   without executing scripts. JavaScript MIME responses use only the quoted-URL
   scanner, never the HTML DOM parser, and are skipped unless `--js-crawl` is set.
+  In HTML, markup and optional JavaScript scanning share the document base URL;
+  a different base origin never grants permission to crawl that origin.
 - Repeated `-u`, target lists, stdin, URL deduplication, regex filters,
   query-insensitive deduplication, plain URL output, and structured JSONL output.
 - TLS certificate verification stays enabled; no insecure TLS flag.

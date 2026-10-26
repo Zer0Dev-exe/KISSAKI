@@ -69,6 +69,7 @@ impl Server {
                         "/script" => ("200 OK", "", "<script src='/app.js'></script>".to_owned()),
                         "/app.js" => ("200 OK", "", "fetch('/api/data');".to_owned()),
                         "/template.js" => ("200 OK", "", r#"const template = "<a href='phantom'>unused</a>"; fetch('/actual');"#.to_owned()),
+                        "/external-base-script" => ("200 OK", "", "<base href='http://localhost:1/'><script>fetch('/phantom');</script>".to_owned()),
                         "/post" => ("200 OK", "", "<form method='post' action='/endpoint'><input name='secret'></form>".to_owned()),
                         "/scope-noise" => ("200 OK", "", "<a href='http://127.0.0.1:1/nope'>outside</a><a href='/blocked'>excluded</a><a href='/ignored'>not included</a><a href='/kept'>allowed</a>".to_owned()),
                         "/scope-noise.js" => ("200 OK", "", "fetch('http://127.0.0.1:1/nope');fetch('/blocked');fetch('/ignored');fetch('/kept');".to_owned()),
@@ -113,6 +114,25 @@ fn config() -> Config {
         delay: Duration::ZERO,
         ..Config::default()
     }
+}
+
+#[tokio::test]
+async fn external_document_base_never_turns_script_paths_into_local_requests() -> Result<()> {
+    let server = Server::start().await?;
+    let report = crawl(
+        vec![server.url("/external-base-script")?],
+        Config {
+            javascript: true,
+            max_links_per_page: 1,
+            ..config()
+        },
+    )
+    .await?;
+    assert!(report.pages[0].links.is_empty());
+    assert_eq!(report.pages.len(), 1);
+    assert!(report.pages[0].error.is_none());
+    assert_eq!(server.requests.lock().await.len(), 1);
+    Ok(())
 }
 
 #[tokio::test]

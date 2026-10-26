@@ -33,6 +33,9 @@ The operator and their CLI configuration are trusted; remote content is not.
 - Do not execute discovered code or submit forms/credentials automatically.
 - Select parsing by MIME. Scan opt-in JavaScript bodies only for quoted endpoint
   strings, without building a DOM or interpreting template strings as HTML.
+- Use the effective HTML document base for both markup and optional script-string
+  resolution before checking scope. An external base must not be discarded to
+  manufacture same-origin requests from root-relative candidates.
 - Do not extract links from HTTP 4xx/5xx bodies. Strict HTTP mode also marks these
   observations as page errors; redirects missing Location always report errors.
 - Skip response bodies for 204/205/304 before validating content encodings. Keep
