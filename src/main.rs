@@ -2,16 +2,20 @@
 
 use std::{
     fs::File,
-    io::{self, BufWriter, IsTerminal, Read, Write},
+    io::{self, BufWriter, IsTerminal, Write},
     path::PathBuf,
     time::Duration,
 };
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
-use kissaki::{Config, crawl, policy::normalize_url};
+use kissaki::{Config, crawl};
 use regex::Regex;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use targets::Targets;
+use url::Url;
+
+mod targets;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -48,6 +52,9 @@ struct Args {
     js_crawl: bool,
     #[arg(long)]
     ignore_query_params: bool,
+    /// Fail the run on HTTP 4xx/5xx responses, preserving their status in JSONL.
+    #[arg(long)]
+    fail_on_http_error: bool,
     #[arg(long)]
     include: Option<String>,
     #[arg(long)]
@@ -62,24 +69,7 @@ struct Args {
     output: Option<PathBuf>,
 }
 
-const MAX_INPUT_BYTES: u64 = 1024 * 1024;
-
-fn read_targets(reader: impl Read, targets: &mut Vec<String>) -> Result<()> {
-    let mut text = String::new();
-    reader.take(MAX_INPUT_BYTES + 1).read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_INPUT_BYTES {
-        bail!("target input exceeds 1 MiB");
-    }
-    targets.extend(
-        text.lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty() && !line.starts_with('#'))
-            .map(str::to_owned),
-    );
-    Ok(())
-}
-
-fn headers(values: Vec<String>) -> Result<HeaderMap> {
+fn headers(values: &[String]) -> Result<HeaderMap> {
     let mut headers = HeaderMap::new();
     for value in values {
         let (name, value) = value
@@ -93,21 +83,21 @@ fn headers(values: Vec<String>) -> Result<HeaderMap> {
     Ok(headers)
 }
 
-async fn run(args: Args) -> Result<()> {
-    let mut targets = args.urls;
-    for path in args.lists {
-        read_targets(
-            File::open(&path).with_context(|| format!("opening {}", path.display()))?,
-            &mut targets,
-        )?;
+fn collect_targets(args: &Args, config: &Config) -> Result<Vec<Url>> {
+    let mut targets = Targets::new(config.max_pages, config.allow_private);
+    for target in &args.urls {
+        targets.argument(target)?;
+    }
+    for path in &args.lists {
+        targets.read(File::open(path).with_context(|| format!("opening {}", path.display()))?)?;
     }
     if !io::stdin().is_terminal() {
-        read_targets(io::stdin().lock(), &mut targets)?;
+        targets.read(io::stdin().lock())?;
     }
-    let seeds = targets
-        .iter()
-        .map(|target| normalize_url(target))
-        .collect::<Result<Vec<_>>>()?;
+    targets.finish()
+}
+
+fn configuration(args: &Args) -> Result<Config> {
     let config = Config {
         depth: args.depth,
         concurrency: args.concurrency,
@@ -120,21 +110,22 @@ async fn run(args: Args) -> Result<()> {
         allow_private: args.allow_private,
         javascript: args.js_crawl,
         ignore_query: args.ignore_query_params,
-        include: args
-            .include
-            .map(|pattern| Regex::new(&pattern))
-            .transpose()?,
-        exclude: args
-            .exclude
-            .map(|pattern| Regex::new(&pattern))
-            .transpose()?,
-        headers: headers(args.headers)?,
+        fail_on_http_error: args.fail_on_http_error,
+        include: args.include.as_deref().map(Regex::new).transpose()?,
+        exclude: args.exclude.as_deref().map(Regex::new).transpose()?,
+        headers: headers(&args.headers)?,
         ..Config::default()
     };
     config.validate()?;
-    let writer: Box<dyn Write> = match args.output {
+    Ok(config)
+}
+
+async fn run(args: Args) -> Result<()> {
+    let config = configuration(&args)?;
+    let seeds = collect_targets(&args, &config)?;
+    let writer: Box<dyn Write> = match &args.output {
         Some(path) => Box::new(
-            File::create_new(&path).with_context(|| format!("creating {}", path.display()))?,
+            File::create_new(path).with_context(|| format!("creating {}", path.display()))?,
         ),
         None => Box::new(io::stdout().lock()),
     };

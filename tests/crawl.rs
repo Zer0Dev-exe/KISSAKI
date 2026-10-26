@@ -58,6 +58,11 @@ impl Server {
                         "/credentials" => ("302 Found", "Location: http://user:secret@example.com/\r\n", String::new()),
                         "/chain1" => ("302 Found", "Location: /chain2\r\n", String::new()),
                         "/chain2" => ("302 Found", "Location: /chain3\r\n", String::new()),
+                        "/missing-location" => ("302 Found", "", String::new()),
+                        "/not-modified" => ("304 Not Modified", "", String::new()),
+                        "/missing" => ("404 Not Found", "", "<a href='/error-link'>not a discovery page</a>".to_owned()),
+                        "/unavailable" => ("503 Service Unavailable", "", "<a href='/error-link'>not a discovery page</a>".to_owned()),
+                        "/binary-error" => ("403 Forbidden", "", "not HTML".to_owned()),
                         "/huge" => ("200 OK", "", "a".repeat(8192)),
                         "/chunked" => ("200 OK", "Transfer-Encoding: chunked\r\n", format!("1000\r\n{}\r\n0\r\n\r\n", "a".repeat(4096))),
                         "/slow" => { tokio::time::sleep(Duration::from_millis(250)).await; ("200 OK", "", "slow".to_owned()) },
@@ -66,10 +71,10 @@ impl Server {
                         "/post" => ("200 OK", "", "<form method='post' action='/endpoint'><input name='secret'></form>".to_owned()),
                         _ => ("200 OK", "", "done".to_owned()),
                     };
-                    let content_type = if path == "/app.js" {
-                        "application/javascript"
-                    } else {
-                        "text/html"
+                    let content_type = match path.as_str() {
+                        "/app.js" => "application/javascript",
+                        "/binary-error" => "application/octet-stream",
+                        _ => "text/html",
                     };
                     let length = if path == "/chunked" {
                         String::new()
@@ -101,6 +106,83 @@ fn config() -> Config {
         delay: Duration::ZERO,
         ..Config::default()
     }
+}
+
+#[tokio::test]
+async fn http_failures_keep_status_without_extracting_error_pages() -> Result<()> {
+    let server = Server::start().await?;
+    for (path, status) in [
+        ("/missing", 404),
+        ("/unavailable", 503),
+        ("/binary-error", 403),
+    ] {
+        let report = crawl(
+            vec![server.url(path)?],
+            Config {
+                fail_on_http_error: true,
+                ..config()
+            },
+        )
+        .await?;
+        assert_eq!(report.pages.len(), 1);
+        let page = &report.pages[0];
+        assert_eq!(page.status, Some(status));
+        assert!(
+            page.error
+                .as_deref()
+                .is_some_and(|error| error.contains(&status.to_string()))
+        );
+        assert!(page.links.is_empty());
+        assert_eq!(page.bytes, 0);
+    }
+    assert_eq!(server.requests.lock().await.len(), 3);
+    Ok(())
+}
+
+#[tokio::test]
+async fn redirects_require_location_but_not_modified_is_not_a_redirect() -> Result<()> {
+    let server = Server::start().await?;
+    let report = crawl(vec![server.url("/missing-location")?], config()).await?;
+    assert_eq!(report.pages.len(), 1);
+    assert_eq!(report.pages[0].status, Some(302));
+    assert_eq!(
+        report.pages[0].error.as_deref(),
+        Some("redirect response missing Location header")
+    );
+    let report = crawl(vec![server.url("/not-modified")?], config()).await?;
+    assert_eq!(report.pages[0].status, Some(304));
+    assert!(report.pages[0].error.is_none());
+    Ok(())
+}
+
+#[tokio::test]
+async fn cli_preserves_http_failure_jsonl_in_optional_strict_mode() -> Result<()> {
+    let server = Server::start().await?;
+    for strict in [false, true] {
+        let seed = server.url("/unavailable")?.to_string();
+        let output = tokio::task::spawn_blocking(move || {
+            let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_kissaki"));
+            command.args(["-u", &seed, "--allow-private", "--jsonl", "--delay-ms", "0"]);
+            if strict {
+                command.arg("--fail-on-http-error");
+            }
+            command.stdin(std::process::Stdio::null()).output()
+        })
+        .await??;
+        assert_eq!(output.status.success(), !strict);
+        let page: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        assert_eq!(page["status"], 503);
+        assert_eq!(page["error"].is_null(), !strict);
+        assert_eq!(page["links"], serde_json::json!([]));
+        if strict {
+            assert!(
+                page["error"]
+                    .as_str()
+                    .is_some_and(|error| error.contains("503"))
+            );
+        }
+    }
+    Ok(())
 }
 
 #[tokio::test]

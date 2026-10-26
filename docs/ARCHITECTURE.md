@@ -6,7 +6,8 @@ Internal modules are concrete types, not a framework of traits and factories.
 
 | Module | Responsibility |
 | --- | --- |
-| `main` | Target input, CLI validation, output, and exit status |
+| `main` | CLI configuration, output, and exit status |
+| `targets` | Shared CLI input byte/seed budgets and early seed validation |
 | `config` | Defaults and named validation of resource limits and headers |
 | `policy` | URL normalization, destination checks, validated DNS resolution |
 | `frontier` | Seed origins, filters, deduplication, queue, redirect admission |
@@ -16,13 +17,15 @@ Internal modules are concrete types, not a framework of traits and factories.
 
 ## Request lifecycle
 
-1. Normalize seeds and validate configuration before scheduling work.
+1. Validate configuration and normalize seeds before creating CLI output files
+   or scheduling work. All CLI input sources share one byte/seed budget.
 2. Admit URLs only within explicit seed origins and configured filters.
 3. Dispatch at most the configured concurrency; pace request starts globally.
 4. Resolve connection addresses through the validating resolver. Reject mixed
    public/private answers unless private access was explicitly enabled.
-5. Read only supported content types within the response byte limit. Never
-   execute discovered content.
+5. Preserve HTTP error status without parsing error bodies. Optional strict HTTP
+   mode records these as page errors. Read only supported successful content
+   types within the response byte limit; never execute discovered content.
 6. Treat redirects as new admission decisions, retaining depth and enforcing
    the redirect budget. Admit extracted links through the same frontier.
 7. Return structured pages, per-page errors, and budget/deadline indicators.
@@ -32,6 +35,9 @@ Internal modules are concrete types, not a framework of traits and factories.
 - Scope uses scheme, host, and effective port, not suffix or substring matching.
 - Authentication headers never justify broadening seed origins.
 - URL byte limits apply both before and after URL normalization/encoding.
+- The extractor caches built-in selectors/patterns, stops collecting after its
+  unique-link budget is full, and skips JavaScript scanning when HTML fills it.
+  DOM parsing itself still processes the bounded body and is not preemptible.
 - The HTTP client never follows redirects or environment proxies independently.
 - TLS verification and the actual-connection DNS validator remain enabled.
 - First-party code forbids `unsafe`; dependency code is outside that guarantee.

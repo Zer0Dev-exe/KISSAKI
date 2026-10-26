@@ -64,3 +64,43 @@ fn javascript_is_opt_in_and_never_executes() -> Result<()> {
     assert_eq!(extract_links(&base, body, true, 10).len(), 2);
     Ok(())
 }
+
+#[test]
+fn invalid_and_duplicate_links_do_not_consume_discovery_budget() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body = r#"<a href=''></a><a href='#fragment'></a><a href='file:///tmp/no'></a><a href='/first#one'></a><a href='/first#two'></a><a href='/second'></a><a href='/third'></a><script>fetch('/fourth');</script>"#;
+    let links = extract_links(&base, body, true, 2);
+    assert_eq!(
+        links.iter().map(Url::path).collect::<Vec<_>>(),
+        ["/first", "/second"]
+    );
+    Ok(())
+}
+
+#[test]
+fn javascript_shares_the_html_budget_and_stops_at_the_limit() -> Result<()> {
+    let base = Url::parse("https://example.com/")?;
+    let body =
+        "<a href='/first'></a><script>fetch('/first');fetch('/second');fetch('/third');</script>";
+    let links = extract_links(&base, body, true, 2);
+    assert_eq!(
+        links.iter().map(Url::path).collect::<Vec<_>>(),
+        ["/first", "/second"]
+    );
+    assert!(extract_links(&base, body, true, 0).is_empty());
+    Ok(())
+}
+
+#[test]
+fn invalid_document_base_falls_back_to_the_response_url() -> Result<()> {
+    let base = Url::parse("https://example.com/path/")?;
+    for value in [
+        "file:///tmp/",
+        "https://user:secret@example.com/",
+        "http://[invalid",
+    ] {
+        let body = format!("<base href='{value}'><a href='next'></a>");
+        assert_eq!(extract_links(&base, &body, false, 1), [base.join("next")?]);
+    }
+    Ok(())
+}

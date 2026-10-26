@@ -74,6 +74,7 @@ kissaki -l targets.txt --jsonl -o results.jsonl
 printf '%s\n' https://your-authorized-host.example | kissaki --js-crawl
 kissaki -u http://127.0.0.1:8080 --allow-private --delay-ms 250
 kissaki -u https://your-authorized-host.example --exclude '/logout|/delete' --ignore-query-params
+kissaki -u https://your-authorized-host.example --jsonl --fail-on-http-error
 ```
 
 `--allow-private` disables the non-public network restriction for the entire run;
@@ -85,11 +86,15 @@ Every URL that is actually requested is printed, including redirect responses an
 failed requests. JSONL adds `depth`, `status`, `content_type`, `bytes`, in-scope
 `links`, `redirect`, and `error`. Results are collected until completion, not
 streamed live. Order follows completion and is not deterministic. Seeds have depth
-0; redirects retain depth. HTTP error statuses such as 404 are observations, not
-transport failures. A capped page budget is a successful bounded run; transport,
+0; redirects retain depth. HTTP error statuses such as 404 are observations by
+default; their bodies are not used for further discovery. Enable
+`--fail-on-http-error` to record 4xx/5xx as page errors and return a nonzero exit
+code, useful in automated pipelines. Redirects without a required `Location`
+header are reported as errors. A capped page budget is a successful bounded run; transport,
 policy/redirect errors, a deadline, or no matching seeds return a nonzero exit code.
 Ctrl-C cancels the run without writing a partial report. Output files are created
-exclusively, never overwritten. Diagnostics go to stderr.
+exclusively, never overwritten. Invalid configuration or seed input is rejected
+before creating an output file. Diagnostics go to stderr.
 
 Custom `-H 'Name: value'` headers are sent to **all explicitly seeded origins**,
 not to out-of-scope destinations. Never put secret headers in public logs, shell
@@ -111,7 +116,10 @@ not the outgoing URL.
 | `--max-redirects` | 5 | 0–20 per redirect chain |
 
 The library additionally exposes `max_links_per_page` (default 256, range 1–1,024).
-Input is limited to 1 MiB per list/stdin; URLs to 4,096 bytes. Only HTML and
+Input has a shared 1 MiB budget across all `-u` values, list files, and stdin,
+including comments and whitespace in files/stdin. Seeds are counted while reading
+and cannot exceed `--max-pages`, including duplicates. URLs are limited to 4,096
+bytes. Only HTML and
 opt-in JavaScript MIME types are read for extraction. Automatic content
 decompression is disabled. Binary bodies are not parsed. Input, parsed DOMs,
 concurrent bodies, discovered links, and the final report all consume memory;
