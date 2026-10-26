@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: First contribution guide
+    url: https://github.com/Zer0Dev-exe/KISSAKI/blob/main/docs/FIRST_CONTRIBUTION.md
+    about: Set up a local checkout, find a small task, and open your first PR.
   - name: Private vulnerability report
     url: https://github.com/Zer0Dev-exe/Kissaki/security/advisories/new
     about: Report security issues privately, without opening a public bug.

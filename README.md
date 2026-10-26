@@ -4,22 +4,44 @@
 
 [![CI](https://github.com/Zer0Dev-exe/Kissaki/actions/workflows/ci.yml/badge.svg)](https://github.com/Zer0Dev-exe/Kissaki/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust: 1.88+](https://img.shields.io/badge/Rust-1.88%2B-orange.svg)](Cargo.toml)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-10b981.svg)](CONTRIBUTING.md)
 
 **Precise discovery. Explicit boundaries.**
+
+[Try it locally](#try-it-locally) · [First contribution](docs/FIRST_CONTRIBUTION.md) ·
+[Good first issues](https://github.com/Zer0Dev-exe/KISSAKI/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22) ·
+[Roadmap](docs/ROADMAP.md) · [Security](SECURITY.md)
 
 Kissaki is a Rust web discovery tool for authorized reconnaissance: discover
 HTTP(S) endpoints, keep every request inside an explicit scope, and leave a
 machine-readable account of what happened. Its priorities are predictable work,
 safe defaults, and code that stays understandable as the project grows.
 
-Kissaki has its own architecture, release goals, and CLI contract; compatibility
-with another crawler is not its product specification. See the
-[roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), and
-[quality contract](docs/QUALITY.md).
+Explore the [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), and
+[quality contract](docs/QUALITY.md) to see where Kissaki is going and how it is
+built.
 
 **Only crawl systems you own or have explicit permission to test.** GET requests
 can still have side effects on poorly designed applications. Rate limits and
 scope checks do not replace authorization or an isolated execution environment.
+
+## Build something sharp with us
+
+**Your first Rust contribution does not have to be a new crawler engine.**
+A clear test, a better example, or a well-explained bug report can make Kissaki
+more dependable. Experienced Rust contributors are welcome too.
+
+| You enjoy… | A useful place to start |
+| --- | --- |
+| Learning Rust | A small [good first issue](https://github.com/Zer0Dev-exe/KISSAKI/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22) with acceptance criteria |
+| Breaking edge cases | Local fixtures in [`tests`](tests) and [`src/tests`](src/tests) |
+| Explaining things clearly | CLI examples, JSONL documentation, and [onboarding](docs/FIRST_CONTRIBUTION.md) |
+| Designing robust systems | [Architecture](docs/ARCHITECTURE.md), [threat model](docs/THREAT_MODEL.md), and [roadmap](docs/ROADMAP.md) |
+
+Start with the **[first-contribution guide](docs/FIRST_CONTRIBUTION.md)**.
+Not sure where to help? [Ask a contribution question](https://github.com/Zer0Dev-exe/KISSAKI/issues/new?template=contribution_help.yml).
+No need to pretend you already know the codebase.
 
 ## Features
 
@@ -65,6 +87,26 @@ cargo build --release --locked
 
 Alternatively: `cargo install --path . --locked`.
 The declared minimum Rust version is 1.88 and is checked in CI.
+
+## Try it locally
+
+No target account, API key, or external website is needed. From the repository
+root, serve the included tiny site in one terminal (optional Python 3 required):
+
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1 --directory examples/site
+```
+
+In another terminal, discover its three pages:
+
+```sh
+cargo run --locked -- -u http://127.0.0.1:8765/ --allow-private --depth 1 --delay-ms 0
+```
+
+You should see `/`, `/guide.html`, and `/status.json` on that local origin;
+completion order can vary. Add `--jsonl` to inspect structured results. Stop the
+demo server with Ctrl-C. `--allow-private` is deliberate here because this is
+your own loopback fixture, not permission to scan someone else's network.
 
 ## Usage
 
